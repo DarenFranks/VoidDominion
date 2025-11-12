@@ -155,8 +155,18 @@ class ManufacturingManager:
         # Check skill requirement
         skill_req = recipe.get("skill_requirement", 0)
         if skill_level < skill_req:
-            skill_name = "Ship Construction" if item_type == "ship" else "Module Manufacturing"
-            return False, f"Requires {skill_name} skill level {skill_req}"
+            if item_type == "ship":
+                skill_name = "Ship Construction"
+                skill_id = "ship_construction"
+            else:
+                skill_name = "Module Manufacturing"
+                skill_id = "module_manufacturing"
+            
+            return False, (
+                f"Requires {skill_name} skill level {skill_req} (currently level {skill_level})\n\n"
+                f"Train this skill at any station with training facilities.\n"
+                f"Look for '{skill_name}' in the Industrial skills category."
+            )
 
         # Check materials (for modules and components)
         if "materials" in recipe:

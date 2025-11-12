@@ -3976,7 +3976,16 @@ class VoidDominionGUI:
             level_req = item_data.get('level_requirement', 1)
             player_level = self.engine.player.level
             skill_req = recipe.get('skill_requirement', 0)
-            player_skill = self.engine.player.get_skill_level('manufacturing')
+            
+            # Determine correct skill based on category
+            if category == 'ships':
+                skill_id = 'ship_construction'
+                skill_display_name = 'Ship Construction'
+            else:
+                skill_id = 'module_manufacturing'
+                skill_display_name = 'Module Manufacturing'
+            
+            player_skill = self.engine.player.get_skill_level(skill_id)
 
             # Determine if locked
             level_locked = player_level < level_req
@@ -4103,9 +4112,12 @@ class VoidDominionGUI:
 
             # Skill requirement with status
             if skill_locked:
-                req_parts.append(f"Skill: {player_skill}/{skill_req} ❌")
+                req_parts.append(f"{skill_display_name}: {player_skill}/{skill_req} ❌")
             else:
-                req_parts.append(f"Skill: {skill_req} ✓")
+                if skill_req > 0:
+                    req_parts.append(f"{skill_display_name}: {skill_req} ✓")
+                else:
+                    req_parts.append(f"{skill_display_name}: None")
 
             requirements_text = " | ".join(req_parts)
 
