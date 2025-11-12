@@ -4787,17 +4787,26 @@ class VoidDominionGUI:
         success, message = self.engine.mine_resources()
 
         if success:
-            messagebox.showinfo("Mining", message)
-            # Update top bar and refresh status view to show new cargo volume
+            # Always update top bar to reflect inventory changes
             self.update_top_bar()
-            self.show_status_view()
-
-            # Check for combat encounter
+            
+            # Check for combat encounter FIRST
             if self.engine.current_combat:
+                # Show mining results message which includes encounter notification
+                messagebox.showinfo("Mining", message)
+                # Then switch to combat view
                 self.show_combat_view()
             # Check for trader encounter
             elif self.engine.current_trader:
+                # Show mining results message which includes encounter notification
+                messagebox.showinfo("Mining", message)
+                # Then switch to trader view
                 self.show_trader_encounter()
+            else:
+                # Only show normal mining results if no encounter
+                messagebox.showinfo("Mining", message)
+                # Refresh status view to show new cargo volume
+                self.show_status_view()
         else:
             messagebox.showerror("Mining Failed", message)
 
