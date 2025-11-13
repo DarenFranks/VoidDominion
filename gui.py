@@ -1585,7 +1585,7 @@ class VoidDominionGUI:
                 # Check if it's a commodity
                 elif item_id in COMMODITIES:
                     item_name = COMMODITIES[item_id]['name']
-                    item_value = COMMODITIES[item_id]["base_value"] * quantity
+                    item_value = COMMODITIES[item_id]["base_price"] * quantity
                     item_type = "Commodity"
                 # Check if it's a module
                 elif item_id in MODULES:
