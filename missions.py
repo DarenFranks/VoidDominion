@@ -132,6 +132,10 @@ class Contract:
         Update contract progress.
         Returns True if contract is completed.
         """
+        # Don't update progress if already completed
+        if self.completed:
+            return False
+            
         obj_type = self.objectives["type"]
 
         if obj_type == "collect_resource":

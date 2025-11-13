@@ -842,6 +842,7 @@ class GameEngine:
                 info += f"  - {LOCATIONS[conn_id]['name']}\n"
 
         # Update contract progress and check for completion
+        completed_contracts = []
         for contract in self.contract_board.active_contracts:
             if contract.objectives.get("type") == "scan_locations":
                 completed = contract.update_progress({"locations_scanned": 1})
@@ -852,6 +853,11 @@ class GameEngine:
                     self.player.add_experience(xp_reward)
                     self.player.stats['contracts_completed'] += 1
                     info += f"\n\n✅ CONTRACT COMPLETE: {contract.name}\nReward: {contract.reward:,} CR + {xp_reward} XP"
+                    completed_contracts.append(contract)
+        
+        # Remove completed contracts from active list
+        for contract in completed_contracts:
+            self.contract_board.active_contracts.remove(contract)
 
         return True, info
 
@@ -880,6 +886,7 @@ class GameEngine:
         info += f"Collected {data_collected} data sample{'s' if data_collected != 1 else ''}"
 
         # Update contract progress and check for completion
+        completed_contracts = []
         for contract in self.contract_board.active_contracts:
             if contract.objectives.get("type") == "collect_data":
                 completed = contract.update_progress({"data_collected": data_collected})
@@ -890,6 +897,11 @@ class GameEngine:
                     self.player.add_experience(xp_reward)
                     self.player.stats['contracts_completed'] += 1
                     info += f"\n\n✅ CONTRACT COMPLETE: {contract.name}\nReward: {contract.reward:,} CR + {xp_reward} XP"
+                    completed_contracts.append(contract)
+        
+        # Remove completed contracts from active list
+        for contract in completed_contracts:
+            self.contract_board.active_contracts.remove(contract)
 
         return True, info
 
