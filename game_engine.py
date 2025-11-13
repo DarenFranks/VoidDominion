@@ -915,17 +915,18 @@ class GameEngine:
             if contract.objectives.get("type") == "transport_cargo":
                 # Check if we're at the destination
                 if self.player.location == contract.objectives.get("destination"):
-                    resource_id = contract.objectives.get("resource_id")
+                    item_id = contract.objectives.get("resource_id")
+                    item_type = contract.objectives.get("item_type", "resource")
                     required_qty = contract.objectives.get("quantity", 0)
 
                     # Check if player has the required cargo
-                    current_qty = self.player.inventory.get(resource_id, 0)
+                    current_qty = self.player.inventory.get(item_id, 0)
 
                     if current_qty >= required_qty:
                         # Remove cargo from inventory
-                        self.player.inventory[resource_id] -= required_qty
-                        if self.player.inventory[resource_id] == 0:
-                            del self.player.inventory[resource_id]
+                        self.player.inventory[item_id] -= required_qty
+                        if self.player.inventory[item_id] == 0:
+                            del self.player.inventory[item_id]
 
                         # Mark contract as delivered
                         completed = contract.update_progress({"delivered": True})
@@ -937,10 +938,16 @@ class GameEngine:
                             self.player.add_experience(xp_reward)
                             self.player.stats['contracts_completed'] += 1
 
-                            resource_name = RESOURCES[resource_id]["name"]
+                            # Get item name based on type
+                            if item_type == "commodity":
+                                from data import COMMODITIES
+                                item_name = COMMODITIES.get(item_id, {}).get("name", item_id)
+                            else:
+                                item_name = RESOURCES.get(item_id, {}).get("name", item_id)
+
                             deliveries_made.append({
                                 "contract_name": contract.name,
-                                "resource": resource_name,
+                                "item": item_name,
                                 "quantity": required_qty,
                                 "reward": contract.reward,
                                 "xp": xp_reward
@@ -949,21 +956,36 @@ class GameEngine:
         if deliveries_made:
             info = f"Cargo delivered at {location_data['name']}!\n\n"
             for delivery in deliveries_made:
-                info += f"✅ Delivered {delivery['quantity']}x {delivery['resource']}\n"
+                info += f"✅ Delivered {delivery['quantity']}x {delivery['item']}\n"
                 info += f"✅ CONTRACT COMPLETE: {delivery['contract_name']}\n"
                 info += f"Reward: {delivery['reward']:,} CR + {delivery['xp']} XP\n\n"
+            
+            # Remove completed contracts from active list
+            contracts_to_remove = [c for c in self.contract_board.active_contracts 
+                                   if c.objectives.get("type") == "transport_cargo" 
+                                   and c.completed]
+            for contract in contracts_to_remove:
+                self.contract_board.active_contracts.remove(contract)
+            
             return True, info.strip()
 
         # Check if player is at any destination but missing cargo
         for contract in self.contract_board.active_contracts:
             if contract.objectives.get("type") == "transport_cargo":
                 if self.player.location == contract.objectives.get("destination"):
-                    resource_id = contract.objectives.get("resource_id")
+                    item_id = contract.objectives.get("resource_id")
+                    item_type = contract.objectives.get("item_type", "resource")
                     required_qty = contract.objectives.get("quantity", 0)
-                    current_qty = self.player.inventory.get(resource_id, 0)
-                    resource_name = RESOURCES[resource_id]["name"]
+                    current_qty = self.player.inventory.get(item_id, 0)
+                    
+                    # Get item name based on type
+                    if item_type == "commodity":
+                        from data import COMMODITIES
+                        item_name = COMMODITIES.get(item_id, {}).get("name", item_id)
+                    else:
+                        item_name = RESOURCES.get(item_id, {}).get("name", item_id)
 
-                    return False, f"Missing cargo! Need {required_qty}x {resource_name}, have {current_qty}x"
+                    return False, f"Missing cargo! Need {required_qty}x {item_name}, have {current_qty}x"
 
         return False, "No cargo delivery contracts for this location"
 

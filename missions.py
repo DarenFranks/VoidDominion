@@ -35,6 +35,21 @@ class Contract:
 
         # Generate objectives based on type
         self.objectives = self._generate_objectives()
+        
+        # Override description for cargo transport to include details
+        if contract_type == "cargo_transport":
+            item_id = self.objectives["resource_id"]
+            item_type = self.objectives.get("item_type", "resource")
+            quantity = self.objectives["quantity"]
+            dest_name = LOCATIONS[self.objectives["destination"]]["name"]
+            
+            if item_type == "commodity":
+                from data import COMMODITIES
+                item_name = COMMODITIES.get(item_id, {}).get("name", item_id)
+            else:
+                item_name = RESOURCES.get(item_id, {}).get("name", item_id)
+            
+            self.description = f"Transport {quantity}x {item_name} from {LOCATIONS[location_id]['name']} to {dest_name}"
 
         self.accepted_time: Optional[float] = None
         self.completed = False
@@ -68,9 +83,29 @@ class Contract:
             }
 
         elif self.contract_type == "cargo_transport":
-            # Transport goods to another location
-            resource_id = random.choice(list(RESOURCES.keys()))
-            quantity = random.randint(100, 500) * self.difficulty
+            # Transport commodities to another location
+            # 70% chance of commodity, 30% chance of resource
+            if random.random() < 0.7:
+                from data import COMMODITIES
+                item_id = random.choice(list(COMMODITIES.keys()))
+                # Get commodity data
+                commodity_data = COMMODITIES[item_id]
+                # Base quantity on value (cheaper = more, expensive = less)
+                if commodity_data["base_price"] < 50:
+                    base_qty = random.randint(50, 150)
+                elif commodity_data["base_price"] < 200:
+                    base_qty = random.randint(20, 80)
+                elif commodity_data["base_price"] < 1000:
+                    base_qty = random.randint(10, 40)
+                else:
+                    base_qty = random.randint(5, 20)
+                quantity = base_qty * self.difficulty
+                item_type = "commodity"
+            else:
+                # Use resources for transport
+                item_id = random.choice(list(RESOURCES.keys()))
+                quantity = random.randint(50, 200) * self.difficulty
+                item_type = "resource"
 
             # Pick a different destination
             all_locations = list(LOCATIONS.keys())
@@ -79,7 +114,8 @@ class Contract:
 
             return {
                 "type": "transport_cargo",
-                "resource_id": resource_id,
+                "resource_id": item_id,  # Can be resource or commodity
+                "item_type": item_type,   # Track what type it is
                 "quantity": quantity,
                 "destination": destination,
                 "cargo_delivered": False
@@ -188,10 +224,19 @@ class Contract:
             return f"Destroy {obj['current_count']}/{obj['target_count']} enemies"
 
         elif obj_type == "transport_cargo":
-            resource_name = RESOURCES[obj["resource_id"]]["name"]
+            # Handle both resources and commodities
+            item_id = obj["resource_id"]
+            item_type = obj.get("item_type", "resource")  # Default to resource for old saves
+            
+            if item_type == "commodity":
+                from data import COMMODITIES
+                item_name = COMMODITIES.get(item_id, {}).get("name", item_id)
+            else:
+                item_name = RESOURCES.get(item_id, {}).get("name", item_id)
+            
             dest_name = LOCATIONS[obj["destination"]]["name"]
             status = "Delivered" if obj["cargo_delivered"] else "In Transit"
-            return f"Transport {obj['quantity']} {resource_name} to {dest_name} ({status})"
+            return f"Transport {obj['quantity']}x {item_name} to {dest_name} ({status})"
 
         elif obj_type == "scan_locations":
             return f"Scan {obj['current_count']}/{obj['target_count']} locations"
