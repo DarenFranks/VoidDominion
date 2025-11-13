@@ -5130,23 +5130,238 @@ class VoidDominionGUI:
         self.create_button(dialog, "Transfer", do_transfer, width=15, style='success').pack(pady=10)
 
     def travel_to(self, destination_id):
-        """Travel to a location"""
-        success, message = self.engine.travel_to_location(destination_id)
+        """Initiate travel to a location with animation"""
+        success, message, travel_info = self.engine.travel_to_location(destination_id)
 
-        if success:
-            # Check for combat encounter
-            if self.engine.current_combat:
-                self.show_combat_view()
-            # Check for trader encounter
-            elif self.engine.current_trader:
-                self.show_trader_encounter()
-            else:
-                messagebox.showinfo("Travel", message)
-                self.update_top_bar()
-                self.refresh_navigation()  # Update navigation buttons for new location
-                self.show_travel_view()
+        if success and travel_info:
+            # Show travel animation overlay
+            self.show_travel_animation(travel_info)
         else:
             messagebox.showerror("Travel Failed", message)
+    
+    def show_travel_animation(self, travel_info):
+        """Show animated travel overlay"""
+        # Create fullscreen overlay
+        overlay = tk.Toplevel(self.root)
+        overlay.title("Traveling...")
+        overlay.geometry(f"{self.root.winfo_width()}x{self.root.winfo_height()}")
+        overlay.configure(bg=COLORS['bg_dark'])
+        overlay.transient(self.root)
+        overlay.grab_set()
+        
+        # Center the overlay
+        overlay.update_idletasks()
+        x = (overlay.winfo_screenwidth() // 2) - (overlay.winfo_width() // 2)
+        y = (overlay.winfo_screenheight() // 2) - (overlay.winfo_height() // 2)
+        overlay.geometry(f"+{x}+{y}")
+        
+        # Main container
+        container = tk.Frame(overlay, bg=COLORS['bg_dark'])
+        container.pack(expand=True, fill=tk.BOTH, padx=50, pady=50)
+        
+        # Title
+        tk.Label(
+            container,
+            text="🚀 TRAVELING THROUGH SPACE",
+            font=('Arial', 24, 'bold'),
+            fg=COLORS['accent'],
+            bg=COLORS['bg_dark']
+        ).pack(pady=(0, 20))
+        
+        # Route info
+        route_frame = tk.Frame(container, bg=COLORS['bg_medium'], relief=tk.RIDGE, bd=2)
+        route_frame.pack(fill=tk.X, pady=10)
+        
+        tk.Label(
+            route_frame,
+            text=f"📍 {travel_info['origin_name']}",
+            font=('Arial', 16),
+            fg=COLORS['text'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=10)
+        
+        tk.Label(
+            route_frame,
+            text="▼▼▼",
+            font=('Arial', 20),
+            fg=COLORS['accent'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=5)
+        
+        # Animated ship indicator
+        ship_label = tk.Label(
+            route_frame,
+            text="🚀",
+            font=('Arial', 40),
+            fg=COLORS['accent'],
+            bg=COLORS['bg_medium']
+        )
+        ship_label.pack(pady=10)
+        
+        tk.Label(
+            route_frame,
+            text="▼▼▼",
+            font=('Arial', 20),
+            fg=COLORS['accent'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=5)
+        
+        tk.Label(
+            route_frame,
+            text=f"🎯 {travel_info['destination_name']}",
+            font=('Arial', 16, 'bold'),
+            fg=COLORS['success'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=10)
+        
+        # Travel info
+        info_frame = tk.Frame(container, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=2)
+        info_frame.pack(fill=tk.X, pady=20)
+        
+        from travel_system import format_travel_time
+        
+        tk.Label(
+            info_frame,
+            text=f"Distance: {travel_info['distance']} light-seconds",
+            font=('Arial', 12),
+            fg=COLORS['text'],
+            bg=COLORS['bg_light']
+        ).pack(pady=5)
+        
+        tk.Label(
+            info_frame,
+            text=f"Travel Time: {format_travel_time(travel_info['travel_time'])}",
+            font=('Arial', 12),
+            fg=COLORS['text'],
+            bg=COLORS['bg_light']
+        ).pack(pady=5)
+        
+        danger_pct = int(travel_info['danger_level'] * 100)
+        danger_color = COLORS['success'] if danger_pct < 30 else (COLORS['warning'] if danger_pct < 70 else COLORS['danger'])
+        tk.Label(
+            info_frame,
+            text=f"Danger Level: {danger_pct}%",
+            font=('Arial', 12),
+            fg=danger_color,
+            bg=COLORS['bg_light']
+        ).pack(pady=5)
+        
+        # Progress bar
+        progress_frame = tk.Frame(container, bg=COLORS['bg_dark'])
+        progress_frame.pack(fill=tk.X, pady=20)
+        
+        tk.Label(
+            progress_frame,
+            text="Progress:",
+            font=('Arial', 12),
+            fg=COLORS['text'],
+            bg=COLORS['bg_dark']
+        ).pack()
+        
+        progress_bar = tk.Canvas(progress_frame, height=30, bg=COLORS['bg_medium'], highlightthickness=0)
+        progress_bar.pack(fill=tk.X, pady=10)
+        
+        # ETA label
+        eta_label = tk.Label(
+            progress_frame,
+            text=f"ETA: {format_travel_time(travel_info['travel_time'])}",
+            font=('Arial', 14, 'bold'),
+            fg=COLORS['accent'],
+            bg=COLORS['bg_dark']
+        )
+        eta_label.pack(pady=5)
+        
+        # Cancel button (initially)
+        button_frame = tk.Frame(container, bg=COLORS['bg_dark'])
+        button_frame.pack(pady=20)
+        
+        cancel_btn = self.create_button(
+            button_frame,
+            "Cancel Travel",
+            lambda: None,  # Will be updated
+            width=15,
+            style='danger'
+        )
+        cancel_btn.pack()
+        
+        # Animation state
+        animation_state = {
+            'start_time': time.time(),
+            'duration': travel_info['travel_time'],
+            'cancelled': False,
+            'ship_animation_frame': 0
+        }
+        
+        def cancel_travel():
+            animation_state['cancelled'] = True
+            overlay.destroy()
+            messagebox.showinfo("Travel Cancelled", "Travel was cancelled. You remain at your current location.")
+        
+        cancel_btn.config(command=cancel_travel)
+        
+        def update_animation():
+            if animation_state['cancelled']:
+                return
+            
+            elapsed = time.time() - animation_state['start_time']
+            remaining = max(0, animation_state['duration'] - elapsed)
+            progress = min(1.0, elapsed / animation_state['duration'])
+            
+            # Update progress bar
+            bar_width = progress_bar.winfo_width()
+            if bar_width > 1:
+                progress_bar.delete("all")
+                filled_width = int(bar_width * progress)
+                progress_bar.create_rectangle(
+                    0, 0, filled_width, 30,
+                    fill=COLORS['success'], outline=""
+                )
+                progress_bar.create_text(
+                    bar_width // 2, 15,
+                    text=f"{int(progress * 100)}%",
+                    font=('Arial', 12, 'bold'),
+                    fill=COLORS['text']
+                )
+            
+            # Update ETA
+            eta_label.config(text=f"ETA: {format_travel_time(int(remaining))}")
+            
+            # Animate ship (rotate icon)
+            animation_state['ship_animation_frame'] += 1
+            ship_icons = ["🚀", "🛸", "✈️", "🛩️"]
+            ship_label.config(text=ship_icons[animation_state['ship_animation_frame'] % len(ship_icons)])
+            
+            # Check if travel complete
+            if elapsed >= animation_state['duration']:
+                complete_travel()
+            else:
+                overlay.after(100, update_animation)  # Update every 100ms
+        
+        def complete_travel():
+            overlay.destroy()
+            
+            # Complete travel in engine
+            success, message = self.engine.complete_travel(travel_info['destination'])
+            
+            if success:
+                # Check for combat encounter
+                if self.engine.current_combat:
+                    messagebox.showinfo("Travel Complete", message)
+                    self.show_combat_view()
+                # Check for trader encounter
+                elif self.engine.current_trader:
+                    messagebox.showinfo("Travel Complete", message)
+                    self.show_trader_encounter()
+                else:
+                    messagebox.showinfo("Travel Complete", message)
+                    self.update_top_bar()
+                    self.refresh_navigation()
+                    self.show_travel_view()
+            else:
+                messagebox.showerror("Travel Error", message)
+        
+        # Start animation
+        overlay.after(100, update_animation)
 
     def scan_area(self):
         """Scan current area"""

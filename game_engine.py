@@ -19,6 +19,7 @@ from berth_system import BerthManager
 from commodity_market import CommodityMarket
 from save_system import save_game, load_game
 from data import LOCATIONS, RESOURCES, MODULES, RAW_RESOURCES, REFINING_YIELD_RANGES, VESSEL_CLASSES, COMMODITIES
+from travel_system import get_travel_distance, calculate_travel_time
 from config import STARTING_CREDITS, STARTING_LOCATION, STARTING_VESSEL
 
 
@@ -164,19 +165,19 @@ class GameEngine:
 
         return messages
 
-    def travel_to_location(self, destination_id: str) -> tuple[bool, str]:
-        """Travel to a new location"""
+    def travel_to_location(self, destination_id: str) -> tuple:
+        """Initiate travel to a new location - returns (success, message, travel_info)"""
         if destination_id not in LOCATIONS:
-            return False, "Invalid location"
+            return False, "Invalid location", None
 
         if destination_id == self.player.location:
-            return False, "You are already at this location"
+            return False, "You are already at this location", None
 
         current_loc = LOCATIONS[self.player.location]
         connections = current_loc.get("connections", [])
 
         if destination_id not in connections:
-            return False, "Cannot travel directly to this location"
+            return False, "Cannot travel directly to this location", None
 
         # Check faction access
         access_info = self.faction_manager.get_player_access(
@@ -184,38 +185,65 @@ class GameEngine:
         )
 
         if access_info["access"] == "forbidden":
-            return False, f"Access denied - {access_info['controlling_faction']} considers you hostile"
+            return False, f"Access denied - {access_info['controlling_faction']} considers you hostile", None
 
-        # Travel takes time based on vessel speed
-        travel_time = 100 / self.vessel.get_effective_speed()  # Base time / speed
-
+        # Calculate travel distance and time
+        distance = get_travel_distance(self.player.location, destination_id)
+        travel_time = calculate_travel_time(distance, self.vessel.get_effective_speed())
+        
+        # Prepare travel info for GUI animation
+        travel_info = {
+            "origin": self.player.location,
+            "origin_name": LOCATIONS[self.player.location]["name"],
+            "destination": destination_id,
+            "destination_name": LOCATIONS[destination_id]["name"],
+            "distance": distance,
+            "travel_time": travel_time,
+            "danger_level": LOCATIONS[destination_id].get("danger_level", 0)
+        }
+        
+        return True, "Travel initiated", travel_info
+    
+    def complete_travel(self, destination_id: str) -> tuple[bool, str]:
+        """Complete travel to destination (called after animation)"""
+        if destination_id not in LOCATIONS:
+            return False, "Invalid location"
+        
+        current_loc_id = self.player.location
+        current_loc = LOCATIONS[current_loc_id]
+        
         # Random encounter chance during travel
         danger_level = LOCATIONS[destination_id].get("danger_level", 0)
-        encounter_chance = danger_level * 0.345  # Up to 34.5% in dangerous areas (increased by 15%)
+        encounter_chance = danger_level * 0.345  # Up to 34.5% in dangerous areas
 
         if random.random() < encounter_chance:
             # Start combat encounter (enemies scale with player level)
             difficulty = "easy" if danger_level < 0.4 else "normal" if danger_level < 0.7 else "hard"
             enemy_vessel, enemy_name = create_enemy_vessel(difficulty, self.player.level)
             self.current_combat = CombatEncounter(self.vessel, enemy_vessel, enemy_name, self.player.level)
-            return True, f"Ambushed by {enemy_name} while traveling! Combat initiated."
+            # Update location before combat
+            self.player.location = destination_id
+            return True, f"Ambushed by {enemy_name} on arrival! Combat initiated."
 
         # Trader encounter chance (only when traveling between stations, not to asteroids)
         current_type = current_loc.get("type", "")
         destination_type = LOCATIONS[destination_id].get("type", "")
 
         if current_type == "station" and destination_type == "station":
-            # 20% chance of trader encounter when traveling between stations
+            # 20% chance of trader encounter
             trader_chance = 0.20
             if random.random() < trader_chance:
                 self.current_trader = self._generate_trader_encounter()
                 # Store destination to complete travel after trader encounter
                 self.pending_travel_destination = destination_id
-                return True, "Encountered a wandering trader during travel!"
+                # Update location
+                self.player.location = destination_id
+                return True, "Encountered a wandering trader on arrival!"
 
         # Successful travel
+        distance_traveled = get_travel_distance(current_loc_id, destination_id)
         self.player.location = destination_id
-        self.player.stats["distance_traveled"] += 100
+        self.player.stats["distance_traveled"] += distance_traveled
 
         # Track visited location for fog of war
         self.player.visited_locations.add(destination_id)
