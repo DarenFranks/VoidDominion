@@ -11,6 +11,7 @@ import time
 from game_engine import GameEngine
 from data import LOCATIONS, RESOURCES, MODULES, SKILLS, FACTIONS, VESSEL_CLASSES, SHIP_COMPONENTS, RAW_RESOURCES, REFINING_YIELD_RANGES
 from save_system import save_exists
+from volume_system import can_add_item
 
 # Color Scheme (Modern Sci-Fi theme)
 COLORS = {
@@ -2621,6 +2622,104 @@ class VoidDominionGUI:
             available_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             available_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
+            # Bottom row: Station inventory
+            station_frame = tk.Frame(modules_content, bg=COLORS['bg_medium'])
+            station_frame.pack(fill=tk.X, padx=10, pady=(10, 5))
+
+            tk.Label(
+                station_frame,
+                text="🏢 Station Storage Modules",
+                font=('Arial', 11, 'bold'),
+                fg=COLORS['accent'],
+                bg=COLORS['bg_medium']
+            ).pack(pady=5)
+
+            # Scrollable station modules list
+            station_canvas = tk.Canvas(station_frame, bg=COLORS['bg_medium'], highlightthickness=0, height=200)
+            station_scrollbar = tk.Scrollbar(station_frame, orient="vertical", command=station_canvas.yview)
+            station_scrollable = tk.Frame(station_canvas, bg=COLORS['bg_medium'])
+
+            station_scrollable.bind(
+                "<Configure>",
+                lambda e: station_canvas.configure(scrollregion=station_canvas.bbox("all"))
+            )
+
+            station_canvas.create_window((0, 0), window=station_scrollable, anchor="nw")
+            station_canvas.configure(yscrollcommand=station_scrollbar.set)
+            self.bind_mousewheel(station_canvas, station_scrollable)
+
+            # Get modules from station inventory
+            current_location = self.engine.player.location
+            station_inventory = self.engine.player.station_inventories.get(current_location, {})
+            station_modules = {}
+            
+            for item_id, quantity in station_inventory.items():
+                if item_id in MODULES:
+                    module_data = MODULES[item_id]
+                    module_type = module_data['type']
+                    if module_type not in station_modules:
+                        station_modules[module_type] = []
+                    station_modules[module_type].append((item_id, module_data, quantity))
+
+            if station_modules:
+                for module_type in ['weapon', 'defense', 'utility', 'engine']:
+                    if module_type in station_modules:
+                        type_header = tk.Label(
+                            station_scrollable,
+                            text=f"▸ {module_type.title()}",
+                            font=('Arial', 10, 'bold'),
+                            fg=COLORS['text_accent'],
+                            bg=COLORS['bg_medium']
+                        )
+                        type_header.pack(anchor='w', padx=5, pady=(5, 2))
+
+                        for module_id, module_data, quantity in station_modules[module_type]:
+                            module_frame = tk.Frame(station_scrollable, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
+                            module_frame.pack(fill=tk.X, padx=5, pady=2)
+
+                            info_frame = tk.Frame(module_frame, bg=COLORS['bg_light'])
+                            info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+                            tk.Label(
+                                info_frame,
+                                text=f"{module_data['name']} (x{quantity})",
+                                font=('Arial', 9, 'bold'),
+                                fg=COLORS['text'],
+                                bg=COLORS['bg_light']
+                            ).pack(anchor='w')
+
+                            # Show module specs using helper function
+                            specs_text = format_module_specs(module_data)
+                            tk.Label(
+                                info_frame,
+                                text=specs_text,
+                                font=('Arial', 8),
+                                fg=COLORS['text_dim'],
+                                bg=COLORS['bg_light']
+                            ).pack(anchor='w')
+
+                            # Transfer to ship button
+                            self.create_button(
+                                module_frame,
+                                "➜ Ship",
+                                lambda m=module_id: self.transfer_module_to_ship(m),
+                                width=8,
+                                style='info'
+                            ).pack(side=tk.RIGHT, padx=5, pady=5)
+
+            else:
+                tk.Label(
+                    station_scrollable,
+                    text="No modules stored at this station\n\nUse Status > Transfer to move items to station storage",
+                    font=('Arial', 10),
+                    fg=COLORS['text_dim'],
+                    bg=COLORS['bg_medium'],
+                    justify=tk.CENTER
+                ).pack(pady=20)
+
+            station_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+            station_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
         # Ships for sale panel
         ships_panel, ships_content = self.create_panel(scrollable_frame, "🚀 Ships For Sale")
         ships_panel.pack(fill=tk.X, pady=(0, 10))
@@ -3507,6 +3606,44 @@ class VoidDominionGUI:
             self.show_shipyard_view()
         else:
             messagebox.showerror("Removal Failed", message)
+
+    def transfer_module_to_ship(self, module_id):
+        """Transfer a module from station storage to ship cargo"""
+        current_location = self.engine.player.location
+        station_inventory = self.engine.player.station_inventories.get(current_location, {})
+        
+        # Check if module exists in station inventory
+        if module_id not in station_inventory or station_inventory[module_id] <= 0:
+            messagebox.showerror("Transfer Failed", "Module not found in station storage")
+            return
+        
+        # Get module info
+        if module_id not in MODULES:
+            messagebox.showerror("Transfer Failed", "Invalid module")
+            return
+        
+        module_data = MODULES[module_id]
+        
+        # Check cargo capacity
+        cargo_capacity = self.engine.vessel.cargo_capacity
+        can_add, message = can_add_item(self.engine.player.ship_cargo, cargo_capacity, module_id, 1)
+        
+        if not can_add:
+            messagebox.showerror("Transfer Failed", f"Insufficient cargo space: {message}")
+            return
+        
+        # Transfer the module
+        # Remove from station
+        station_inventory[module_id] -= 1
+        if station_inventory[module_id] == 0:
+            del station_inventory[module_id]
+        
+        # Add to ship cargo
+        self.engine.player.add_item(module_id, 1)
+        
+        messagebox.showinfo("Transfer Complete", f"{module_data['name']} transferred to ship cargo")
+        self.update_top_bar()
+        self.show_shipyard_view()
 
     def show_modules_view(self):
         """Show module marketplace"""
