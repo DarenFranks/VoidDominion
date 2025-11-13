@@ -1229,18 +1229,33 @@ class VoidDominionGUI:
         self.status_training_content = None  # Clear reference when leaving status view
         self.clear_content()
 
-        panel, content = self.create_panel(self.content_frame, "Galactic Map")
-        panel.pack(fill=tk.BOTH, expand=True)
+        # Create two-column layout for map and connections
+        left_frame = tk.Frame(self.content_frame, bg=COLORS['bg_dark'])
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
 
+        right_frame = tk.Frame(self.content_frame, bg=COLORS['bg_dark'])
+        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
+
+        # LEFT: Universe Map
+        map_panel, map_content = self.create_panel(left_frame, "🌌 Universe Map")
+        map_panel.pack(fill=tk.BOTH, expand=True)
+
+        # Create map display with key
+        self.create_universe_map(map_content)
+
+        # RIGHT: Current Location & Connections
         current_loc = LOCATIONS[self.engine.player.location]
 
         # Current location info
-        info_frame = tk.Frame(content, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=2)
+        loc_panel, loc_content = self.create_panel(right_frame, "Current Location")
+        loc_panel.pack(fill=tk.X, pady=(0, 10))
+
+        info_frame = tk.Frame(loc_content, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=2)
         info_frame.pack(fill=tk.X, pady=10)
 
         tk.Label(
             info_frame,
-            text=f"Current Location: {current_loc['name']}",
+            text=current_loc['name'],
             font=('Arial', 14, 'bold'),
             fg=COLORS['accent'],
             bg=COLORS['bg_light']
@@ -1252,25 +1267,31 @@ class VoidDominionGUI:
             font=('Arial', 10),
             fg=COLORS['text'],
             bg=COLORS['bg_light'],
-            wraplength=600
-        ).pack(pady=5)
+            wraplength=400
+        ).pack(pady=5, padx=10)
 
         # Connected locations
-        tk.Label(
-            content,
-            text="Connected Locations:",
-            font=('Arial', 12, 'bold'),
-            fg=COLORS['text'],
-            bg=COLORS['bg_medium']
-        ).pack(anchor='w', pady=10)
+        conn_panel, conn_content = self.create_panel(right_frame, "Connected Locations")
+        conn_panel.pack(fill=tk.BOTH, expand=True)
 
-        locations_frame = tk.Frame(content, bg=COLORS['bg_medium'])
-        locations_frame.pack(fill=tk.BOTH, expand=True)
+        # Scrollable connections
+        canvas = tk.Canvas(conn_content, bg=COLORS['bg_medium'], highlightthickness=0)
+        scrollbar = tk.Scrollbar(conn_content, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=COLORS['bg_medium'])
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        self.bind_mousewheel(canvas, scrollable_frame)
 
         for conn_id in current_loc.get('connections', []):
             conn_data = LOCATIONS[conn_id]
 
-            loc_frame = tk.Frame(locations_frame, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
+            loc_frame = tk.Frame(scrollable_frame, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
             loc_frame.pack(fill=tk.X, pady=5, padx=10)
 
             # Location info
@@ -1280,7 +1301,7 @@ class VoidDominionGUI:
             tk.Label(
                 info,
                 text=conn_data['name'],
-                font=('Arial', 12, 'bold'),
+                font=('Arial', 11, 'bold'),
                 fg=COLORS['accent'],
                 bg=COLORS['bg_light']
             ).pack(anchor='w')
@@ -1291,7 +1312,7 @@ class VoidDominionGUI:
                 font=('Arial', 9),
                 fg=COLORS['text'],
                 bg=COLORS['bg_light'],
-                wraplength=400
+                wraplength=300
             ).pack(anchor='w', pady=2)
 
             danger = int(conn_data.get('danger_level', 0) * 100)
@@ -1315,6 +1336,207 @@ class VoidDominionGUI:
                 lambda loc=conn_id: self.travel_to(loc),
                 width=12
             ).pack()
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    def create_universe_map(self, parent_frame):
+        """Create a visual map of the universe with key"""
+        # Map container with scrolling
+        map_container = tk.Frame(parent_frame, bg=COLORS['bg_medium'])
+        map_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Canvas for scrolling
+        canvas = tk.Canvas(map_container, bg=COLORS['bg_dark'], highlightthickness=0)
+        v_scrollbar = tk.Scrollbar(map_container, orient="vertical", command=canvas.yview)
+        h_scrollbar = tk.Scrollbar(map_container, orient="horizontal", command=canvas.xview)
+        map_frame = tk.Frame(canvas, bg=COLORS['bg_dark'])
+
+        map_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=map_frame, anchor="nw")
+        canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+
+        # Legend - Always visible at top
+        legend_frame = tk.Frame(map_frame, bg=COLORS['bg_medium'], relief=tk.RIDGE, bd=2)
+        legend_frame.pack(fill=tk.X, pady=(0, 10), padx=5)
+
+        tk.Label(
+            legend_frame,
+            text="📍 MAP KEY",
+            font=('Arial', 11, 'bold'),
+            fg=COLORS['accent'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=(5, 2))
+
+        legend_items = [
+            ("⭐ Your Location", COLORS['accent']),
+            ("🛰️ Station", COLORS['text']),
+            ("🌍 Planet", COLORS['success']),
+            ("☄️ Asteroid Belt", COLORS['warning']),
+            ("🌐 Space Zone", COLORS['danger']),
+            ("━━ Connection", COLORS['text_dim'])
+        ]
+
+        legend_grid = tk.Frame(legend_frame, bg=COLORS['bg_medium'])
+        legend_grid.pack(pady=5)
+
+        for i, (text, color) in enumerate(legend_items):
+            col = i % 3
+            row = i // 3
+            tk.Label(
+                legend_grid,
+                text=text,
+                font=('Arial', 9),
+                fg=color,
+                bg=COLORS['bg_medium']
+            ).grid(row=row, column=col, padx=15, pady=2, sticky='w')
+
+        # Group locations by territory
+        territories = {
+            "Neutral Zone": [],
+            "Meridian Collective": [],
+            "Technocrat Union": [],
+            "Cipher Dominion": [],
+            "Void Corsairs": [],
+            "Other": []
+        }
+
+        # Categorize locations
+        for loc_id, loc_data in LOCATIONS.items():
+            faction = loc_data.get('faction')
+            if faction is None:
+                territories["Neutral Zone"].append((loc_id, loc_data))
+            elif faction == "meridian_collective":
+                territories["Meridian Collective"].append((loc_id, loc_data))
+            elif faction == "technocrat_union":
+                territories["Technocrat Union"].append((loc_id, loc_data))
+            elif faction == "cipher_dominion":
+                territories["Cipher Dominion"].append((loc_id, loc_data))
+            elif faction == "void_corsairs":
+                territories["Void Corsairs"].append((loc_id, loc_data))
+            else:
+                territories["Other"].append((loc_id, loc_data))
+
+        # Display territories
+        current_location = self.engine.player.location
+
+        for territory_name, locations in territories.items():
+            if not locations:
+                continue
+
+            # Territory header
+            territory_header = tk.Frame(map_frame, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=2)
+            territory_header.pack(fill=tk.X, pady=(10, 5), padx=5)
+
+            tk.Label(
+                territory_header,
+                text=f"▼ {territory_name} ({len(locations)} locations)",
+                font=('Arial', 12, 'bold'),
+                fg=COLORS['accent'],
+                bg=COLORS['bg_light']
+            ).pack(pady=8, padx=10, anchor='w')
+
+            # Locations grid
+            locations_grid = tk.Frame(map_frame, bg=COLORS['bg_dark'])
+            locations_grid.pack(fill=tk.X, padx=5, pady=(0, 5))
+
+            for idx, (loc_id, loc_data) in enumerate(sorted(locations, key=lambda x: x[1]['name'])):
+                col = idx % 4
+                row = idx // 4
+
+                # Determine icon based on type
+                loc_type = loc_data.get('type', 'space')
+                if loc_type == 'station':
+                    icon = '🛰️'
+                elif loc_type == 'planet':
+                    icon = '🌍'
+                elif loc_type == 'asteroid':
+                    icon = '☄️'
+                else:
+                    icon = '🌐'
+
+                # Highlight current location
+                is_current = (loc_id == current_location)
+                bg_color = COLORS['accent'] if is_current else COLORS['bg_light']
+                fg_color = COLORS['bg_dark'] if is_current else COLORS['text']
+
+                if is_current:
+                    icon = '⭐'
+
+                # Location button/card
+                loc_frame = tk.Frame(locations_grid, bg=bg_color, relief=tk.RIDGE, bd=2)
+                loc_frame.grid(row=row, column=col, padx=3, pady=3, sticky='ew')
+
+                # Make clickable to travel if connected
+                is_connected = loc_id in LOCATIONS[current_location].get('connections', [])
+
+                def create_location_label(parent, loc_id, loc_data, icon, fg_color, bg_color, is_connected, is_current):
+                    frame = tk.Frame(parent, bg=bg_color)
+                    frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+                    # Name with icon
+                    name_text = f"{icon} {loc_data['name']}"
+                    if is_current:
+                        name_text = f"{name_text}\n(YOU ARE HERE)"
+
+                    label = tk.Label(
+                        frame,
+                        text=name_text,
+                        font=('Arial', 8, 'bold' if is_current else 'normal'),
+                        fg=fg_color,
+                        bg=bg_color,
+                        wraplength=140,
+                        justify=tk.CENTER
+                    )
+                    label.pack()
+
+                    # Danger level
+                    danger = int(loc_data.get('danger_level', 0) * 100)
+                    danger_text = f"⚠️ {danger}%" if danger > 0 else "Safe"
+                    danger_label_color = COLORS['success'] if danger < 30 else (COLORS['warning'] if danger < 70 else COLORS['danger'])
+                    if is_current:
+                        danger_label_color = COLORS['bg_dark']
+
+                    tk.Label(
+                        frame,
+                        text=danger_text,
+                        font=('Arial', 7),
+                        fg=danger_label_color,
+                        bg=bg_color
+                    ).pack()
+
+                    # Connection indicator
+                    if is_connected and not is_current:
+                        tk.Label(
+                            frame,
+                            text="━━ Connected ━━",
+                            font=('Arial', 7),
+                            fg=COLORS['success'] if not is_current else COLORS['bg_dark'],
+                            bg=bg_color
+                        ).pack(pady=(2, 0))
+
+                        # Make frame clickable for travel
+                        def travel_handler(event, loc=loc_id):
+                            self.travel_to(loc)
+
+                        frame.bind("<Button-1>", travel_handler)
+                        label.bind("<Button-1>", travel_handler)
+                        frame.config(cursor="hand2")
+                        label.config(cursor="hand2")
+
+                create_location_label(loc_frame, loc_id, loc_data, icon, fg_color, bg_color, is_connected, is_current)
+
+        # Configure grid columns to expand equally
+        for i in range(4):
+            locations_grid.grid_columnconfigure(i, weight=1, uniform="col")
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def show_market_view(self, category='all'):
         """Show market/trading view with category filtering"""
