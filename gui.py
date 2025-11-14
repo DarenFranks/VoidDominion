@@ -5245,6 +5245,27 @@ class VoidDominionGUI:
             bg=COLORS['bg_medium']
         ).pack(pady=5)
         
+        # COUNTDOWN TIMER - Large and prominent
+        countdown_frame = tk.Frame(right_frame, bg=COLORS['bg_dark'], relief=tk.RIDGE, bd=3)
+        countdown_frame.pack(fill=tk.X, pady=15)
+        
+        tk.Label(
+            countdown_frame,
+            text="TIME REMAINING",
+            font=('Arial', 10, 'bold'),
+            fg=COLORS['text_dim'],
+            bg=COLORS['bg_dark']
+        ).pack(pady=(10, 5))
+        
+        countdown_label = tk.Label(
+            countdown_frame,
+            text=f"{travel_info['travel_time']}s",
+            font=('Arial', 48, 'bold'),
+            fg=COLORS['accent'],
+            bg=COLORS['bg_dark']
+        )
+        countdown_label.pack(pady=10)
+        
         # Travel info - compact
         info_frame = tk.Frame(right_frame, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=2)
         info_frame.pack(fill=tk.X, pady=15)
@@ -5261,7 +5282,7 @@ class VoidDominionGUI:
         
         tk.Label(
             info_frame,
-            text=f"Time: {format_travel_time(travel_info['travel_time'])}",
+            text=f"Total Time: {format_travel_time(travel_info['travel_time'])}",
             font=('Arial', 10),
             fg=COLORS['text'],
             bg=COLORS['bg_light']
@@ -5337,6 +5358,13 @@ class VoidDominionGUI:
             elapsed = time.time() - animation_state['start_time']
             remaining = max(0, animation_state['duration'] - elapsed)
             progress = min(1.0, elapsed / animation_state['duration'])
+            
+            # Update countdown timer (large display)
+            remaining_int = int(remaining)
+            if remaining_int > 0:
+                countdown_label.config(text=f"{remaining_int}s")
+            else:
+                countdown_label.config(text="0s", fg=COLORS['success'])
             
             # Update progress bar
             bar_width = progress_bar.winfo_width()

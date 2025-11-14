@@ -188,8 +188,8 @@ def calculate_travel_time(distance, vessel_speed):
     speed_factor = max(vessel_speed / 10.0, 1.0)
     travel_time = int(distance / speed_factor)
     
-    # Minimum 5 seconds, maximum 120 seconds (2 minutes)
-    return max(5, min(travel_time, 120))
+    # Minimum 2 seconds, maximum 10 seconds
+    return max(2, min(travel_time, 10))
 
 
 def format_travel_time(seconds):
