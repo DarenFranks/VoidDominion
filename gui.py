@@ -5140,7 +5140,7 @@ class VoidDominionGUI:
             messagebox.showerror("Travel Failed", message)
     
     def show_travel_animation(self, travel_info):
-        """Show animated travel overlay"""
+        """Show animated travel overlay with map"""
         # Create fullscreen overlay
         overlay = tk.Toplevel(self.root)
         overlay.title("Traveling...")
@@ -5155,125 +5155,156 @@ class VoidDominionGUI:
         y = (overlay.winfo_screenheight() // 2) - (overlay.winfo_height() // 2)
         overlay.geometry(f"+{x}+{y}")
         
-        # Main container
-        container = tk.Frame(overlay, bg=COLORS['bg_dark'])
-        container.pack(expand=True, fill=tk.BOTH, padx=50, pady=50)
+        # Main container with two columns
+        main_container = tk.Frame(overlay, bg=COLORS['bg_dark'])
+        main_container.pack(expand=True, fill=tk.BOTH, padx=20, pady=20)
+        
+        # LEFT COLUMN: Universe Map
+        left_frame = tk.Frame(main_container, bg=COLORS['bg_dark'])
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        # Map panel with title
+        map_panel_frame = tk.Frame(left_frame, bg=COLORS['bg_medium'], relief=tk.RIDGE, bd=2)
+        map_panel_frame.pack(fill=tk.BOTH, expand=True)
+        
+        tk.Label(
+            map_panel_frame,
+            text="🌌 Universe Map",
+            font=('Arial', 14, 'bold'),
+            fg=COLORS['accent'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=10)
+        
+        # Create map content
+        map_content_frame = tk.Frame(map_panel_frame, bg=COLORS['bg_dark'])
+        map_content_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Insert the universe map
+        self.create_universe_map(map_content_frame)
+        
+        # RIGHT COLUMN: Travel Progress Info
+        right_frame = tk.Frame(main_container, bg=COLORS['bg_dark'])
+        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=(10, 0))
+        
+        # Configure right frame width
+        right_frame.config(width=400)
+        right_frame.pack_propagate(False)
         
         # Title
         tk.Label(
-            container,
-            text="🚀 TRAVELING THROUGH SPACE",
-            font=('Arial', 24, 'bold'),
+            right_frame,
+            text="🚀 TRAVELING",
+            font=('Arial', 20, 'bold'),
             fg=COLORS['accent'],
             bg=COLORS['bg_dark']
-        ).pack(pady=(0, 20))
+        ).pack(pady=(0, 15))
         
-        # Route info
-        route_frame = tk.Frame(container, bg=COLORS['bg_medium'], relief=tk.RIDGE, bd=2)
+        # Route info - more compact
+        route_frame = tk.Frame(right_frame, bg=COLORS['bg_medium'], relief=tk.RIDGE, bd=2)
         route_frame.pack(fill=tk.X, pady=10)
         
         tk.Label(
             route_frame,
-            text=f"📍 {travel_info['origin_name']}",
-            font=('Arial', 16),
+            text=f"From: {travel_info['origin_name']}",
+            font=('Arial', 11),
             fg=COLORS['text'],
             bg=COLORS['bg_medium']
-        ).pack(pady=10)
+        ).pack(pady=5)
         
         tk.Label(
             route_frame,
-            text="▼▼▼",
-            font=('Arial', 20),
+            text="▼",
+            font=('Arial', 16),
             fg=COLORS['accent'],
             bg=COLORS['bg_medium']
-        ).pack(pady=5)
+        ).pack(pady=2)
         
         # Animated ship indicator
         ship_label = tk.Label(
             route_frame,
             text="🚀",
-            font=('Arial', 40),
+            font=('Arial', 30),
             fg=COLORS['accent'],
             bg=COLORS['bg_medium']
         )
-        ship_label.pack(pady=10)
+        ship_label.pack(pady=5)
         
         tk.Label(
             route_frame,
-            text="▼▼▼",
-            font=('Arial', 20),
+            text="▼",
+            font=('Arial', 16),
             fg=COLORS['accent'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=2)
+        
+        tk.Label(
+            route_frame,
+            text=f"To: {travel_info['destination_name']}",
+            font=('Arial', 11, 'bold'),
+            fg=COLORS['success'],
             bg=COLORS['bg_medium']
         ).pack(pady=5)
         
-        tk.Label(
-            route_frame,
-            text=f"🎯 {travel_info['destination_name']}",
-            font=('Arial', 16, 'bold'),
-            fg=COLORS['success'],
-            bg=COLORS['bg_medium']
-        ).pack(pady=10)
-        
-        # Travel info
-        info_frame = tk.Frame(container, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=2)
-        info_frame.pack(fill=tk.X, pady=20)
+        # Travel info - compact
+        info_frame = tk.Frame(right_frame, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=2)
+        info_frame.pack(fill=tk.X, pady=15)
         
         from travel_system import format_travel_time
         
         tk.Label(
             info_frame,
-            text=f"Distance: {travel_info['distance']} light-seconds",
-            font=('Arial', 12),
+            text=f"Distance: {travel_info['distance']} ls",
+            font=('Arial', 10),
             fg=COLORS['text'],
             bg=COLORS['bg_light']
-        ).pack(pady=5)
+        ).pack(pady=3)
         
         tk.Label(
             info_frame,
-            text=f"Travel Time: {format_travel_time(travel_info['travel_time'])}",
-            font=('Arial', 12),
+            text=f"Time: {format_travel_time(travel_info['travel_time'])}",
+            font=('Arial', 10),
             fg=COLORS['text'],
             bg=COLORS['bg_light']
-        ).pack(pady=5)
+        ).pack(pady=3)
         
         danger_pct = int(travel_info['danger_level'] * 100)
         danger_color = COLORS['success'] if danger_pct < 30 else (COLORS['warning'] if danger_pct < 70 else COLORS['danger'])
         tk.Label(
             info_frame,
-            text=f"Danger Level: {danger_pct}%",
-            font=('Arial', 12),
+            text=f"Danger: {danger_pct}%",
+            font=('Arial', 10),
             fg=danger_color,
             bg=COLORS['bg_light']
-        ).pack(pady=5)
+        ).pack(pady=3)
         
         # Progress bar
-        progress_frame = tk.Frame(container, bg=COLORS['bg_dark'])
-        progress_frame.pack(fill=tk.X, pady=20)
+        progress_frame = tk.Frame(right_frame, bg=COLORS['bg_dark'])
+        progress_frame.pack(fill=tk.X, pady=15)
         
         tk.Label(
             progress_frame,
             text="Progress:",
-            font=('Arial', 12),
+            font=('Arial', 11, 'bold'),
             fg=COLORS['text'],
             bg=COLORS['bg_dark']
         ).pack()
         
-        progress_bar = tk.Canvas(progress_frame, height=30, bg=COLORS['bg_medium'], highlightthickness=0)
-        progress_bar.pack(fill=tk.X, pady=10)
+        progress_bar = tk.Canvas(progress_frame, height=25, bg=COLORS['bg_medium'], highlightthickness=0)
+        progress_bar.pack(fill=tk.X, pady=8)
         
         # ETA label
         eta_label = tk.Label(
             progress_frame,
             text=f"ETA: {format_travel_time(travel_info['travel_time'])}",
-            font=('Arial', 14, 'bold'),
+            font=('Arial', 13, 'bold'),
             fg=COLORS['accent'],
             bg=COLORS['bg_dark']
         )
         eta_label.pack(pady=5)
         
-        # Cancel button (initially)
-        button_frame = tk.Frame(container, bg=COLORS['bg_dark'])
-        button_frame.pack(pady=20)
+        # Cancel button
+        button_frame = tk.Frame(right_frame, bg=COLORS['bg_dark'])
+        button_frame.pack(pady=15)
         
         cancel_btn = self.create_button(
             button_frame,
