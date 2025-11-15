@@ -1782,18 +1782,33 @@ class VoidDominionGUI:
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # Right - Inventory
+        # Right - Inventory (Ship Cargo + Station Storage)
         right_col = tk.Frame(self.content_frame, bg=COLORS['bg_dark'])
         right_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
 
-        inv_panel, inv_content = self.create_panel(right_col, "Ship Cargo")
-        inv_panel.pack(fill=tk.BOTH, expand=True)
+        # SHIP CARGO Panel (Top Half)
+        ship_panel, ship_content = self.create_panel(right_col, "🚀 Ship Cargo")
+        ship_panel.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+
+        # Import all item types
+        from data import MODULES
 
         if self.engine.player.inventory:
             total_value = 0
 
-            # Import all item types
-            from data import MODULES
+            # Create scrollable frame for ship cargo
+            ship_canvas = tk.Canvas(ship_content, bg=COLORS['bg_medium'], highlightthickness=0, height=200)
+            ship_scrollbar = tk.Scrollbar(ship_content, orient="vertical", command=ship_canvas.yview)
+            ship_scrollable = tk.Frame(ship_canvas, bg=COLORS['bg_medium'])
+
+            ship_scrollable.bind(
+                "<Configure>",
+                lambda e: ship_canvas.configure(scrollregion=(0, 0, ship_canvas.winfo_width(), ship_scrollable.winfo_reqheight()))
+            )
+
+            ship_canvas.create_window((0, 0), window=ship_scrollable, anchor="nw")
+            ship_canvas.configure(yscrollcommand=ship_scrollbar.set)
+            self.bind_mousewheel(ship_canvas, ship_scrollable)
 
             for item_id, quantity in sorted(self.engine.player.inventory.items()):
                 item_name = None
@@ -1823,7 +1838,7 @@ class VoidDominionGUI:
 
                 total_value += item_value
 
-                item_frame = tk.Frame(inv_content, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
+                item_frame = tk.Frame(ship_scrollable, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
                 item_frame.pack(fill=tk.X, pady=3, padx=5)
 
                 # Left side - name and quantity
@@ -1855,18 +1870,124 @@ class VoidDominionGUI:
                     bg=COLORS['bg_light']
                 ).pack(side=tk.RIGHT, padx=10, pady=5)
 
+            ship_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            ship_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
             # Total value
             tk.Label(
-                inv_content,
-                text=f"Total Cargo Value: {total_value:,} CR",
-                font=('Arial', 11, 'bold'),
+                ship_content,
+                text=f"Total Value: {total_value:,} CR",
+                font=('Arial', 10, 'bold'),
                 fg=COLORS['success'],
                 bg=COLORS['bg_medium']
-            ).pack(pady=10)
+            ).pack(pady=5)
         else:
             tk.Label(
-                inv_content,
+                ship_content,
                 text="Cargo hold is empty",
+                font=('Arial', 10),
+                fg=COLORS['text_dim'],
+                bg=COLORS['bg_medium']
+            ).pack(pady=20)
+
+        # STATION STORAGE Panel (Bottom Half)
+        station_panel, station_content = self.create_panel(right_col, "🏪 Station Storage")
+        station_panel.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
+
+        station_inventory = self.engine.player.get_station_inventory(self.engine.player.location)
+
+        if station_inventory:
+            total_station_value = 0
+
+            # Create scrollable frame for station storage
+            station_canvas = tk.Canvas(station_content, bg=COLORS['bg_medium'], highlightthickness=0, height=200)
+            station_scrollbar = tk.Scrollbar(station_content, orient="vertical", command=station_canvas.yview)
+            station_scrollable = tk.Frame(station_canvas, bg=COLORS['bg_medium'])
+
+            station_scrollable.bind(
+                "<Configure>",
+                lambda e: station_canvas.configure(scrollregion=(0, 0, station_canvas.winfo_width(), station_scrollable.winfo_reqheight()))
+            )
+
+            station_canvas.create_window((0, 0), window=station_scrollable, anchor="nw")
+            station_canvas.configure(yscrollcommand=station_scrollbar.set)
+            self.bind_mousewheel(station_canvas, station_scrollable)
+
+            for item_id, quantity in sorted(station_inventory.items()):
+                item_name = None
+                item_value = 0
+                item_type = None
+
+                # Check if it's a resource
+                if item_id in RESOURCES:
+                    item_name = RESOURCES[item_id]['name']
+                    item_value = RESOURCES[item_id]["base_price"] * quantity
+                    item_type = "Resource"
+                # Check if it's a commodity
+                elif item_id in COMMODITIES:
+                    item_name = COMMODITIES[item_id]['name']
+                    item_value = COMMODITIES[item_id]["base_price"] * quantity
+                    item_type = "Commodity"
+                # Check if it's a module
+                elif item_id in MODULES:
+                    item_name = MODULES[item_id]['name']
+                    item_value = MODULES[item_id].get("manufacturing_cost", 1000) * quantity
+                    item_type = "Module"
+                else:
+                    # Unknown item
+                    item_name = item_id
+                    item_value = 0
+                    item_type = "Unknown"
+
+                total_station_value += item_value
+
+                item_frame = tk.Frame(station_scrollable, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
+                item_frame.pack(fill=tk.X, pady=3, padx=5)
+
+                # Left side - name and quantity
+                left_info = tk.Frame(item_frame, bg=COLORS['bg_light'])
+                left_info.pack(side=tk.LEFT, padx=10, pady=5)
+
+                tk.Label(
+                    left_info,
+                    text=f"{item_name}: {quantity}",
+                    font=('Arial', 10, 'bold'),
+                    fg=COLORS['text'],
+                    bg=COLORS['bg_light']
+                ).pack(anchor='w')
+
+                tk.Label(
+                    left_info,
+                    text=f"[{item_type}]",
+                    font=('Arial', 8),
+                    fg=COLORS['text_dim'],
+                    bg=COLORS['bg_light']
+                ).pack(anchor='w')
+
+                # Right side - value
+                tk.Label(
+                    item_frame,
+                    text=f"~{item_value:,} CR",
+                    font=('Arial', 9),
+                    fg=COLORS['success'],
+                    bg=COLORS['bg_light']
+                ).pack(side=tk.RIGHT, padx=10, pady=5)
+
+            station_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            station_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+            # Total value
+            tk.Label(
+                station_content,
+                text=f"Total Value: {total_station_value:,} CR",
+                font=('Arial', 10, 'bold'),
+                fg=COLORS['success'],
+                bg=COLORS['bg_medium']
+            ).pack(pady=5)
+        else:
+            tk.Label(
+                station_content,
+                text="No items in station storage",
                 font=('Arial', 10),
                 fg=COLORS['text_dim'],
                 bg=COLORS['bg_medium']
@@ -5487,10 +5608,10 @@ class VoidDominionGUI:
 
     def buy_resource(self, resource_id):
         """Buy resource from market"""
-        # Simple quantity dialog
+        # Enhanced quantity dialog with destination selection
         dialog = tk.Toplevel(self.root)
         dialog.title("Buy Resource")
-        dialog.geometry("300x150")
+        dialog.geometry("350x220")
         dialog.configure(bg=COLORS['bg_medium'])
 
         resource = RESOURCES[resource_id]
@@ -5503,13 +5624,48 @@ class VoidDominionGUI:
             bg=COLORS['bg_medium']
         ).pack(pady=10)
 
+        # Destination selection
+        tk.Label(
+            dialog,
+            text="Buy to:",
+            font=('Arial', 10),
+            fg=COLORS['text'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=(5, 0))
+
+        dest_var = tk.StringVar(value="ship")
+        dest_frame = tk.Frame(dialog, bg=COLORS['bg_medium'])
+        dest_frame.pack(pady=5)
+
+        tk.Radiobutton(
+            dest_frame,
+            text="Ship Cargo",
+            variable=dest_var,
+            value="ship",
+            font=('Arial', 10),
+            fg=COLORS['text'],
+            bg=COLORS['bg_medium'],
+            selectcolor=COLORS['bg_light']
+        ).pack(side=tk.LEFT, padx=10)
+
+        tk.Radiobutton(
+            dest_frame,
+            text="Station Storage",
+            variable=dest_var,
+            value="station",
+            font=('Arial', 10),
+            fg=COLORS['text'],
+            bg=COLORS['bg_medium'],
+            selectcolor=COLORS['bg_light']
+        ).pack(side=tk.LEFT, padx=10)
+
         tk.Label(
             dialog,
             text="Quantity:",
             font=('Arial', 10),
             fg=COLORS['text'],
             bg=COLORS['bg_medium']
-        ).pack()
+        ).pack(pady=(10, 0))
 
         quantity_var = tk.IntVar(value=10)
         quantity_entry = tk.Entry(
@@ -5532,7 +5688,15 @@ class VoidDominionGUI:
 
             if success:
                 self.engine.player.spend_credits(cost)
-                self.engine.player.add_item(resource_id, quantity_var.get())
+                
+                # Add to the selected destination
+                if dest_var.get() == "ship":
+                    self.engine.player.add_item(resource_id, quantity_var.get())
+                else:
+                    # Add to station storage
+                    station_inv = self.engine.player.get_station_inventory(self.engine.player.location)
+                    station_inv[resource_id] = station_inv.get(resource_id, 0) + quantity_var.get()
+                
                 dialog.destroy()
                 self.update_top_bar()
                 self.show_market_view(self.current_market_category)
