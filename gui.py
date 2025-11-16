@@ -1663,14 +1663,35 @@ class VoidDominionGUI:
                     bg=COLORS['bg_light']
                 ).pack(anchor='w')
 
-                # Right side - value
+                # Right side - value and sell button
+                right_frame = tk.Frame(item_frame, bg=COLORS['bg_light'])
+                right_frame.pack(side=tk.RIGHT, padx=10, pady=5)
+
                 tk.Label(
-                    item_frame,
+                    right_frame,
                     text=f"~{item_value:,} CR",
                     font=('Arial', 9),
                     fg=COLORS['success'],
                     bg=COLORS['bg_light']
-                ).pack(side=tk.RIGHT, padx=10, pady=5)
+                ).pack(side=tk.LEFT, padx=(0, 10))
+
+                # Add sell button for commodities and resources
+                if item_id in COMMODITIES:
+                    self.create_button(
+                        right_frame,
+                        "Sell",
+                        lambda i=item_id: self.sell_commodity(i),
+                        width=6,
+                        style='warning'
+                    ).pack(side=tk.LEFT)
+                elif item_id in RESOURCES:
+                    self.create_button(
+                        right_frame,
+                        "Sell",
+                        lambda i=item_id: self.sell_resource(i),
+                        width=6,
+                        style='warning'
+                    ).pack(side=tk.LEFT)
 
             ship_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             ship_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -1766,14 +1787,26 @@ class VoidDominionGUI:
                     bg=COLORS['bg_light']
                 ).pack(anchor='w')
 
-                # Right side - value
+                # Right side - value and load button
+                right_frame = tk.Frame(item_frame, bg=COLORS['bg_light'])
+                right_frame.pack(side=tk.RIGHT, padx=10, pady=5)
+
                 tk.Label(
-                    item_frame,
+                    right_frame,
                     text=f"~{item_value:,} CR",
                     font=('Arial', 9),
                     fg=COLORS['success'],
                     bg=COLORS['bg_light']
-                ).pack(side=tk.RIGHT, padx=10, pady=5)
+                ).pack(side=tk.LEFT, padx=(0, 10))
+
+                # Add load button to transfer from station to ship
+                self.create_button(
+                    right_frame,
+                    "Load",
+                    lambda i=item_id: self.load_from_station(i),
+                    width=6,
+                    style='success'
+                ).pack(side=tk.LEFT)
 
             station_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             station_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -5892,6 +5925,111 @@ class VoidDominionGUI:
                 messagebox.showerror("Sale Failed", message)
 
         self.create_button(dialog, "Sell", do_sell, width=15, style='warning').pack(pady=10)
+
+    def load_from_station(self, item_id):
+        """Load items from station storage to ship cargo"""
+        from data import COMMODITIES, RESOURCES, MODULES
+
+        station_inv = self.engine.player.get_station_inventory(self.engine.player.location)
+        station_qty = station_inv.get(item_id, 0)
+
+        if station_qty == 0:
+            messagebox.showerror("Error", "No items in station storage")
+            return
+
+        # Determine item name and type
+        item_name = None
+        item_volume = 1  # Default volume
+
+        if item_id in COMMODITIES:
+            item_name = COMMODITIES[item_id]['name']
+            item_volume = COMMODITIES[item_id].get('volume', 1)
+        elif item_id in RESOURCES:
+            item_name = RESOURCES[item_id]['name']
+            item_volume = RESOURCES[item_id].get('volume', 1)
+        elif item_id in MODULES:
+            item_name = MODULES[item_id]['name']
+            item_volume = MODULES[item_id].get('volume', 10)
+        else:
+            item_name = item_id
+            item_volume = 1
+
+        # Create dialog
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Load to Ship")
+        dialog.geometry("350x200")
+        dialog.configure(bg=COLORS['bg_medium'])
+
+        tk.Label(
+            dialog,
+            text=f"Load {item_name}",
+            font=('Arial', 12, 'bold'),
+            fg=COLORS['accent'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=10)
+
+        tk.Label(
+            dialog,
+            text=f"Available in station: {station_qty}",
+            font=('Arial', 10),
+            fg=COLORS['text'],
+            bg=COLORS['bg_medium']
+        ).pack()
+
+        tk.Label(
+            dialog,
+            text="Quantity to load:",
+            font=('Arial', 10),
+            fg=COLORS['text'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=(10, 0))
+
+        quantity_var = tk.IntVar(value=min(station_qty, 10))
+        quantity_entry = tk.Entry(
+            dialog,
+            textvariable=quantity_var,
+            font=('Arial', 12),
+            bg=COLORS['bg_light'],
+            fg=COLORS['text'],
+            justify='center'
+        )
+        quantity_entry.pack(pady=5)
+
+        def do_load():
+            quantity = quantity_var.get()
+
+            if quantity <= 0:
+                messagebox.showerror("Error", "Invalid quantity")
+                return
+
+            if quantity > station_qty:
+                messagebox.showerror("Error", f"Only {station_qty} available in station storage")
+                return
+
+            # Check cargo space
+            current_cargo = self.engine.player.get_cargo_used()
+            max_cargo = self.engine.player.get_cargo_capacity()
+            needed_space = quantity * item_volume
+
+            if current_cargo + needed_space > max_cargo:
+                max_loadable = int((max_cargo - current_cargo) / item_volume)
+                messagebox.showerror("Error", f"Insufficient cargo space. Can only load {max_loadable} units")
+                return
+
+            # Transfer from station to ship
+            station_inv[item_id] -= quantity
+            if station_inv[item_id] == 0:
+                del station_inv[item_id]
+
+            # Add to ship cargo
+            self.engine.player.inventory[item_id] = self.engine.player.inventory.get(item_id, 0) + quantity
+
+            dialog.destroy()
+            self.update_top_bar()
+            self.show_market_view(self.current_market_category)
+            messagebox.showinfo("Success", f"Loaded {quantity} {item_name} to ship cargo")
+
+        self.create_button(dialog, "Load", do_load, width=15, style='success').pack(pady=10)
 
     def train_skill(self, skill_id):
         """Start training a skill"""
