@@ -1593,7 +1593,7 @@ class VoidDominionGUI:
         ship_panel.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
 
         # Import all item types
-        from data import MODULES
+        from data import MODULES, COMMODITIES, RESOURCES
 
         if self.engine.player.inventory:
             total_value = 0
