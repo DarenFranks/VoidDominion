@@ -4994,6 +4994,39 @@ LOCATIONS = {
     }
 }
 
+# Fix bidirectional connections - Part 1
+LOCATIONS["axiom_labs"]["connections"].extend(["protocol_labs", "singularity_reach"])
+LOCATIONS["bastion_prime"]["connections"].extend(["dreadnought_yards", "supremacy_throne"])
+LOCATIONS["binary_belt"]["connections"].extend(["circuit_fields"])
+LOCATIONS["chronos_expanse"]["connections"].extend(["quantum_drift"])
+LOCATIONS["corsair_haven"]["connections"].extend(["phantom_reach", "dread_maw"])
+LOCATIONS["crimson_expanse"]["connections"].extend(["bastion_prime", "garrison_outpost", "contested_zone"])
+LOCATIONS["datacore_prime"]["connections"].extend(["silicon_spire"])
+LOCATIONS["dead_zone_asteroids"]["connections"].extend(["reaver_belt"])
+LOCATIONS["dread_maw"]["connections"].extend(["oblivion_gate"])
+LOCATIONS["dreadnought_yards"]["connections"].extend(["supremacy_throne"])
+LOCATIONS["eden_prime"]["connections"].extend(["horizon_vista"])
+LOCATIONS["forge_station"]["connections"].extend(["ironhold_world", "pristine_fields", "binary_belt"])
+LOCATIONS["harvest_fields"]["connections"].extend(["tranquil_belt", "sapphire_fields"])
+LOCATIONS["ironhold_sectors"]["connections"].extend(["warforge_belt", "iron_expanse"])
+LOCATIONS["ironhold_world"]["connections"].extend(["bastion_prime", "vanguard_citadel"])
+LOCATIONS["meridian_gates"]["connections"].extend(["merchant_corridor", "explorer_outpost", "uncharted_expanse"])
+LOCATIONS["neural_network"]["connections"].extend(["chronos_expanse", "datacore_prime", "silicon_spire"])
+LOCATIONS["nexus_prime"]["connections"].extend(["starlight_waystation", "tranquil_belt", "freeport_exchange"])
+LOCATIONS["outer_belts"]["connections"].extend(["harvest_fields", "starlight_waystation"])
+LOCATIONS["prosperity_hub"]["connections"].extend(["horizon_vista"])
+LOCATIONS["protocol_labs"]["connections"].extend(["algorithm_expanse"])
+LOCATIONS["quantum_drift"]["connections"].extend(["recursion_point"])
+LOCATIONS["sapphire_fields"]["connections"].extend(["verdant_belt"])
+LOCATIONS["shadow_nebula"]["connections"].extend(["phantom_reach", "oblivion_gate"])
+LOCATIONS["silicon_spire"]["connections"].extend(["convergence_nexus"])
+LOCATIONS["singularity_reach"]["connections"].extend(["recursion_point"])
+LOCATIONS["synthesis_planet"]["connections"].extend(["chronos_expanse", "datacore_prime", "void_forge"])
+LOCATIONS["titan_alpha"]["connections"].extend(["freeport_exchange", "aurora_reach", "sapphire_fields", "eden_prime"])
+LOCATIONS["vanguard_citadel"]["connections"].extend(["dreadnought_yards", "supremacy_throne"])
+LOCATIONS["void_forge"]["connections"].extend(["convergence_nexus"])
+LOCATIONS["warforge_belt"]["connections"].extend(["sovereign_belt"])
+
 # ============= FACTIONS (Updated with Loyalty System) =============
 FACTIONS = {
     "meridian_collective": {
