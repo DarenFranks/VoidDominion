@@ -6924,6 +6924,9 @@ class VoidDominionGUI:
                 notif_frame.destroy()
                 if notif_frame in self.active_notifications:
                     self.active_notifications.remove(notif_frame)
+                # Force refresh the notification container to clear visual artifacts
+                if self.notification_container and self.notification_container.winfo_exists():
+                    self.notification_container.update_idletasks()
 
         self.root.after(5000, dismiss)
 
