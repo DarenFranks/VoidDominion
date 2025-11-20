@@ -36,6 +36,7 @@ COLORS = {
     'success': '#00ff88',           # Bright green
     'danger': '#ff3366',            # Bright red
     'warning': '#ffaa00',           # Bright orange
+    'info': '#00d9ff',              # Bright cyan
 
     # UI elements
     'header': '#0d1117',            # Top bar background
