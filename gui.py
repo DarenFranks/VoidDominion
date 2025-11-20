@@ -1323,6 +1323,13 @@ class VoidDominionGUI:
 
         # RIGHT: Current Location & Connections
         current_loc = LOCATIONS[self.engine.player.location]
+        
+        # DEBUG: Log what we're finding
+        print(f"[DEBUG] Player location: {self.engine.player.location}")
+        print(f"[DEBUG] Location name: {current_loc.get('name', 'UNKNOWN')}")
+        connections = current_loc.get('connections', [])
+        print(f"[DEBUG] Connections found: {len(connections)}")
+        print(f"[DEBUG] Connection IDs: {connections}")
 
         # Current location info
         loc_panel, loc_content = self.create_panel(right_frame, "Current Location")
