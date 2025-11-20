@@ -1188,6 +1188,41 @@ class VoidDominionGUI:
                         bg=COLORS['bg_light']
                     ).pack(anchor='w', pady=2)
 
+                # Delivery destination info
+                if contract.objectives.get("type") == "transport_cargo":
+                    dest_id = contract.objectives.get("destination")
+                    dest_name = LOCATIONS.get(dest_id, {}).get("name", dest_id)
+                    tk.Label(
+                        info_frame,
+                        text=f"🎯 Deliver to: {dest_name}",
+                        font=('Arial', 9),
+                        fg=COLORS['accent'],
+                        bg=COLORS['bg_light']
+                    ).pack(anchor='w', pady=2)
+
+                # Action buttons
+                button_frame = tk.Frame(contract_frame, bg=COLORS['bg_light'])
+                button_frame.pack(fill=tk.X, padx=10, pady=8)
+
+                # Delivery completion button for cargo transport contracts
+                if contract.objectives.get("type") == "transport_cargo":
+                    self.create_button(
+                        button_frame,
+                        "Deliver Cargo",
+                        lambda c=contract: self.complete_delivery_contract(c),
+                        width=15,
+                        style='success'
+                    ).pack(side=tk.LEFT, padx=2)
+
+                # Abandon button
+                self.create_button(
+                    button_frame,
+                    "Abandon",
+                    lambda c=contract: self.abandon_contract(c),
+                    width=12,
+                    style='danger'
+                ).pack(side=tk.LEFT, padx=2)
+
         else:
             # No contracts message
             no_contract_frame = tk.Frame(contracts_content, bg=COLORS['bg_medium'])
@@ -6199,6 +6234,36 @@ class VoidDominionGUI:
             messagebox.showinfo("Contract Accepted", f"Accepted: {contract.name}")
         
         self.show_contracts_view()
+
+    def complete_delivery_contract(self, contract):
+        """Complete a delivery contract by depositing cargo at destination"""
+        success, message = self.engine.contract_board.complete_delivery_contract(contract.contract_id, self.engine.player)
+        
+        if success:
+            # Get reward
+            reward = self.engine.contract_board.complete_contract(contract.contract_id)
+            if reward:
+                self.engine.player.add_credits(reward)
+                contract_xp = int(reward / 10)
+                self.engine.player.add_experience(contract_xp)
+                self.engine.player.stats['contracts_completed'] += 1
+                messagebox.showinfo(
+                    "Delivery Complete!",
+                    f"{message}\n\nReward: {reward:,} CR + {contract_xp} XP"
+                )
+            else:
+                messagebox.showinfo("Delivery Complete!", message)
+            
+            # Refresh status view to update contracts
+            self.show_status_view()
+        else:
+            messagebox.showerror("Delivery Failed", message)
+
+    def abandon_contract(self, contract):
+        """Abandon an active contract"""
+        if messagebox.askyesno("Confirm", f"Abandon contract: {contract.name}?"):
+            self.engine.contract_board.abandon_contract(contract.contract_id)
+            self.show_status_view()
 
     def show_trader_encounter(self):
         """Show trader encounter dialog"""
