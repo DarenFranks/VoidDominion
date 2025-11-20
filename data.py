@@ -368,6 +368,160 @@ def generate_ship_classes():
 
 VESSEL_CLASSES = generate_ship_classes()
 
+# Add Faction Ships - Require level 10 of corresponding piloting skill
+# These are unique, powerful ships that represent the pinnacle of each class
+def add_faction_ships():
+    """Add faction-specific ships for each ship type"""
+    faction_ships = {}
+    
+    # Define faction ships for each ship type
+    # Stats are 2.5x Tier 3 specialized (the best regular ship)
+    faction_ship_data = {
+        "scout": {
+            "name": "Nexus Shadow",
+            "description": "Elite stealth reconnaissance vessel",
+            "cost": 15000000,
+            "hull_hp": 2250,
+            "shield": 1350,
+            "armor": 225,
+            "speed": 252,
+            "cargo": 600,
+            "weapon_slots": 1,
+            "defense_slots": 1,
+            "utility_slots": 2,
+            "engine_slots": 1
+        },
+        "fighter": {
+            "name": "Crimson Fury",
+            "description": "Supreme combat interceptor",
+            "cost": 25000000,
+            "hull_hp": 3600,
+            "shield": 2250,
+            "armor": 450,
+            "speed": 224,
+            "cargo": 450,
+            "weapon_slots": 2,
+            "defense_slots": 1,
+            "utility_slots": 1,
+            "engine_slots": 1
+        },
+        "hauler": {
+            "name": "Titan Colossus",
+            "description": "Legendary cargo transport",
+            "cost": 35000000,
+            "hull_hp": 9000,
+            "shield": 1800,
+            "armor": 900,
+            "speed": 84,
+            "cargo": 9000,
+            "weapon_slots": 1,
+            "defense_slots": 2,
+            "utility_slots": 3,
+            "engine_slots": 1
+        },
+        "cruiser": {
+            "name": "Sovereign Guardian",
+            "description": "Elite multi-role command vessel",
+            "cost": 60000000,
+            "hull_hp": 13500,
+            "shield": 6750,
+            "armor": 1350,
+            "speed": 140,
+            "cargo": 1500,
+            "weapon_slots": 3,
+            "defense_slots": 2,
+            "utility_slots": 2,
+            "engine_slots": 1
+        },
+        "destroyer": {
+            "name": "Void Reaper",
+            "description": "Devastating heavy assault ship",
+            "cost": 80000000,
+            "hull_hp": 22500,
+            "shield": 9000,
+            "armor": 2250,
+            "speed": 112,
+            "cargo": 2400,
+            "weapon_slots": 4,
+            "defense_slots": 3,
+            "utility_slots": 2,
+            "engine_slots": 2
+        },
+        "battleship": {
+            "name": "Dominion Leviathan",
+            "description": "Ultimate weapon of war",
+            "cost": 120000000,
+            "hull_hp": 45000,
+            "shield": 18000,
+            "armor": 3600,
+            "speed": 84,
+            "cargo": 3600,
+            "weapon_slots": 6,
+            "defense_slots": 4,
+            "utility_slots": 3,
+            "engine_slots": 2
+        },
+        "carrier": {
+            "name": "Nexus Ark",
+            "description": "Fleet command and support flagship",
+            "cost": 100000000,
+            "hull_hp": 31500,
+            "shield": 13500,
+            "armor": 2700,
+            "speed": 98,
+            "cargo": 6000,
+            "weapon_slots": 3,
+            "defense_slots": 4,
+            "utility_slots": 6,
+            "engine_slots": 2
+        },
+        "refinery": {
+            "name": "Prometheus Station",
+            "description": "Mobile industrial complex",
+            "cost": 150000000,
+            "hull_hp": 18000,
+            "shield": 4500,
+            "armor": 1800,
+            "speed": 70,
+            "cargo": 12000,
+            "weapon_slots": 1,
+            "defense_slots": 3,
+            "utility_slots": 8,
+            "engine_slots": 1
+        }
+    }
+    
+    # Create faction ship entries
+    for ship_type, data in faction_ship_data.items():
+        ship_id = f"{ship_type}_faction"
+        
+        faction_ships[ship_id] = {
+            "name": data["name"],
+            "description": data["description"],
+            "cost": data["cost"],
+            "hull_hp": data["hull_hp"],
+            "shield_capacity": data["shield"],
+            "armor_rating": data["armor"],
+            "cargo_capacity": data["cargo"],
+            "base_speed": data["speed"],
+            "module_slots": {
+                "weapon": data["weapon_slots"],
+                "defense": data["defense_slots"],
+                "utility": data["utility_slots"],
+                "engine": data["engine_slots"]
+            },
+            "class_type": ship_type,
+            "variant": "faction",  # This triggers the level 10 skill requirement
+            "tier": "faction",
+            "tier_num": 4,  # Special tier for faction ships
+            "level_requirement": 20  # High level requirement
+        }
+    
+    return faction_ships
+
+# Add faction ships to vessel classes
+VESSEL_CLASSES.update(add_faction_ships())
+
 # Starting vessel
 STARTING_VESSEL = "scout_standard_mk1"
 
@@ -4373,6 +4527,71 @@ SKILLS = {
         "description": "Train multiple skills simultaneously. Each level unlocks an additional training slot (max 5 slots at level 5)",
         "max_level": 5,
         "bonus_per_level": {"training_slots": 1.0}
+    },
+
+    # Ship Piloting Skills (One for each ship type)
+    "scout_piloting": {
+        "name": "Scout Piloting",
+        "category": "piloting",
+        "description": "Master the Scout-class ships. Levels 1-3: Tier 1, Levels 4-6: Tier 2, Levels 7-9: Tier 3, Level 10: Faction Scout",
+        "max_level": 10,
+        "bonus_per_level": {"ship_handling": 0.05, "scout_speed": 0.02}
+    },
+    "fighter_piloting": {
+        "name": "Fighter Piloting",
+        "category": "piloting",
+        "description": "Master the Fighter-class ships. Levels 1-3: Tier 1, Levels 4-6: Tier 2, Levels 7-9: Tier 3, Level 10: Faction Fighter",
+        "max_level": 10,
+        "bonus_per_level": {"combat_maneuvers": 0.05, "weapon_handling": 0.03}
+    },
+    "hauler_piloting": {
+        "name": "Hauler Piloting",
+        "category": "piloting",
+        "description": "Master the Hauler-class ships. Levels 1-3: Tier 1, Levels 4-6: Tier 2, Levels 7-9: Tier 3, Level 10: Faction Hauler",
+        "max_level": 10,
+        "bonus_per_level": {"cargo_handling": 0.06, "fuel_efficiency": 0.02}
+    },
+    "cruiser_piloting": {
+        "name": "Cruiser Piloting",
+        "category": "piloting",
+        "description": "Master the Cruiser-class ships. Levels 1-3: Tier 1, Levels 4-6: Tier 2, Levels 7-9: Tier 3, Level 10: Faction Cruiser",
+        "max_level": 10,
+        "bonus_per_level": {"shield_handling": 0.04, "armor_efficiency": 0.03}
+    },
+    "destroyer_piloting": {
+        "name": "Destroyer Piloting",
+        "category": "piloting",
+        "description": "Master the Destroyer-class ships. Levels 1-3: Tier 1, Levels 4-6: Tier 2, Levels 7-9: Tier 3, Level 10: Faction Destroyer",
+        "max_level": 10,
+        "bonus_per_level": {"tactical_firing": 0.05, "evasion": 0.03}
+    },
+    "battleship_piloting": {
+        "name": "Battleship Piloting",
+        "category": "piloting",
+        "description": "Master the Battleship-class ships. Levels 1-3: Tier 1, Levels 4-6: Tier 2, Levels 7-9: Tier 3, Level 10: Faction Battleship",
+        "max_level": 10,
+        "bonus_per_level": {"firepower": 0.06, "armor": 0.04}
+    },
+    "carrier_piloting": {
+        "name": "Carrier Piloting",
+        "category": "piloting",
+        "description": "Master the Carrier-class ships. Levels 1-3: Tier 1, Levels 4-6: Tier 2, Levels 7-9: Tier 3, Level 10: Faction Carrier",
+        "max_level": 10,
+        "bonus_per_level": {"fleet_support": 0.05, "hanger_efficiency": 0.04}
+    },
+    "refinery_piloting": {
+        "name": "Refinery Piloting",
+        "category": "piloting",
+        "description": "Master the Refinery-class ships. Levels 1-3: Tier 1, Levels 4-6: Tier 2, Levels 7-9: Tier 3, Level 10: Faction Refinery",
+        "max_level": 10,
+        "bonus_per_level": {"refining_efficiency": 0.06, "processing_speed": 0.03}
+    },
+    "mothership_piloting": {
+        "name": "Mothership Piloting",
+        "category": "piloting",
+        "description": "Master the Mothership-class ships. Levels 1-3: Tier 1, Levels 4-6: Tier 2, Levels 7-9: Tier 3, Level 10: Faction Mothership",
+        "max_level": 10,
+        "bonus_per_level": {"fleet_coordination": 0.05, "support_systems": 0.04}
     }
 }
 

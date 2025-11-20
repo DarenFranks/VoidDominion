@@ -25,6 +25,8 @@ class Player:
 
         # Skills system
         self.skills: Dict[str, int] = {skill_id: 0 for skill_id in SKILLS.keys()}
+        # Start with Scout Piloting level 1 since player begins with a scout ship
+        self.skills["scout_piloting"] = 1
         self.skill_training: List[Dict] = []  # List of currently training skills
 
         # Inventory systems

@@ -632,9 +632,10 @@ class ShipMarket:
         return self.station_inventories.get(location_id, {})
 
     def get_available_ships(self, location_id: str, player_level: int, player_credits: int) -> List[Dict]:
+    def get_available_ships(self, location_id: str, player_credits: int, player_level: int, player_skills: Dict = None) -> List[Dict]:
         """
         Get ships available for purchase at a station
-        Shows ALL ships in stock regardless of player level/credits
+        Shows ships player can afford, has level for, AND has piloting skill for
         """
         inventory = self.get_station_inventory(location_id)
 
@@ -650,12 +651,29 @@ class ShipMarket:
             ship_data = VESSEL_CLASSES[ship_id]
             level_req = ship_data.get("level_requirement", 1)
             cost = self.calculate_ship_cost(ship_id)
-
-            # Determine if player can purchase
+            
+            # Check piloting skill requirement
+            class_type = ship_data.get("class_type", "scout")
+            tier_num = ship_data.get("tier_num", 1)
+            skill_id = f"{class_type}_piloting"
+            
+            # Determine required skill level based on tier
+            if tier_num == 1:
+                required_skill_level = 1  # Levels 1-3 for tier 1
+            elif tier_num == 2:
+                required_skill_level = 4  # Levels 4-6 for tier 2
+            else:  # tier_num == 3
+                required_skill_level = 7  # Levels 7-9 for tier 3
+            
+            # Check player requirements
             can_afford = player_credits >= cost
-            can_pilot = player_level >= level_req
+            can_pilot_level = player_level >= level_req
+            can_pilot_skill = True
+            if player_skills:
+                skill_level = player_skills.get(skill_id, 0)
+                can_pilot_skill = skill_level >= required_skill_level
             in_stock = stock_quantity > 0
-            can_purchase = can_afford and can_pilot and in_stock
+            can_purchase = can_afford and can_pilot_level and can_pilot_skill and in_stock
 
             available.append({
                 "id": ship_id,
@@ -666,14 +684,16 @@ class ShipMarket:
                 "tier_num": ship_data.get("tier_num", 1),
                 "cost": cost,
                 "level_req": level_req,
+                "skill_req": f"{skill_id} {required_skill_level}+",
                 "stock": stock_quantity,
                 "can_afford": can_afford,
-                "can_pilot": can_pilot,
+                "can_pilot_level": can_pilot_level,
+                "can_pilot_skill": can_pilot_skill,
                 "in_stock": in_stock,
                 "can_purchase": can_purchase,
                 "stats": {
                     "hull_hp": ship_data.get("hull_hp", 0),
-                    "shield_capacity": ship_data.get("base_shield_capacity", 0),
+                    "shield_capacity": ship_data.get("shield_capacity", 0),
                     "armor_rating": ship_data.get("armor_rating", 0),
                     "base_speed": ship_data.get("base_speed", 0),
                     "cargo_capacity": ship_data.get("cargo_capacity", 0)

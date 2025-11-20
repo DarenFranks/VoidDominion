@@ -13,7 +13,7 @@ class Shipyard:
     def __init__(self):
         self.trade_in_value_multiplier = 0.70  # Get 70% of base cost when selling
 
-    def get_available_ships(self, player_level: int, location_services: List[str]) -> List[Dict]:
+    def get_available_ships(self, player_level: int, location_services: List[str], player_skills: Dict = None) -> List[Dict]:
         """Get list of ships available for purchase at current location"""
         if "shipyard" not in location_services:
             return []
@@ -23,22 +23,49 @@ class Shipyard:
         for ship_id, ship_data in VESSEL_CLASSES.items():
             # Check level requirement
             level_req = ship_data.get("level_requirement", 1)
-            if player_level >= level_req:
-                available.append({
-                    "id": ship_id,
-                    "name": ship_data["name"],
-                    "type": ship_data["type"],
-                    "tier": ship_data.get("tier", 1),
-                    "cost": ship_data["cost"],
-                    "level_req": level_req,
-                    "stats": {
-                        "hull_hp": ship_data["hull_hp"],
-                        "shield_capacity": ship_data["base_shield_capacity"],
-                        "armor": ship_data["armor_rating"],
-                        "speed": ship_data["speed"],
-                        "cargo": ship_data["cargo_capacity"]
-                    }
-                })
+            if player_level < level_req:
+                continue
+            
+            # Check piloting skill requirement
+            class_type = ship_data.get("class_type", "scout")
+            tier_num = ship_data.get("tier_num", 1)
+            variant = ship_data.get("variant", "standard")
+            skill_id = f"{class_type}_piloting"
+            
+            # Determine required skill level based on tier and variant
+            if variant == "faction":
+                required_skill_level = 10  # Faction ships require max skill
+            elif tier_num == 1:
+                required_skill_level = 1  # Levels 1-3 for tier 1
+            elif tier_num == 2:
+                required_skill_level = 4  # Levels 4-6 for tier 2
+            else:  # tier_num == 3
+                required_skill_level = 7  # Levels 7-9 for tier 3
+            
+            # Check if player has the required skill level
+            if player_skills:
+                skill_level = player_skills.get(skill_id, 0)
+                if skill_level < required_skill_level:
+                    continue  # Skip this ship if player doesn't have the skill
+            else:
+                continue  # No skills available, skip
+
+            available.append({
+                "id": ship_id,
+                "name": ship_data["name"],
+                "type": ship_data["class_type"],
+                "tier": tier_num,
+                "cost": ship_data["cost"],
+                "level_req": level_req,
+                "skill_req": f"{skill_id} level {required_skill_level}+",
+                "stats": {
+                    "hull_hp": ship_data["hull_hp"],
+                    "shield_capacity": ship_data["shield_capacity"],
+                    "armor": ship_data["armor_rating"],
+                    "speed": ship_data["base_speed"],
+                    "cargo": ship_data["cargo_capacity"]
+                }
+            })
 
         # Sort by tier then cost
         available.sort(key=lambda x: (x["tier"], x["cost"]))
@@ -93,6 +120,7 @@ class Shipyard:
         ship_id: str,
         player_credits: int,
         player_level: int,
+        player_skills: Dict = None,
         current_ship_id: str = None,
         trade_in: bool = False
     ) -> Tuple[bool, str, int]:
@@ -109,6 +137,27 @@ class Shipyard:
         level_req = ship_data.get("level_requirement", 1)
         if player_level < level_req:
             return False, f"Requires level {level_req}", 0
+
+        # Check piloting skill requirement
+        class_type = ship_data.get("class_type", "scout")
+        tier_num = ship_data.get("tier_num", 1)
+        skill_id = f"{class_type}_piloting"
+        
+        # Determine required skill level based on tier
+        if tier_num == 1:
+            required_skill_level = 1  # Levels 1-3 for tier 1
+        elif tier_num == 2:
+            required_skill_level = 4  # Levels 4-6 for tier 2
+        else:  # tier_num == 3
+            required_skill_level = 7  # Levels 7-9 for tier 3
+        
+        # Check if player has the required skill level
+        if player_skills:
+            skill_level = player_skills.get(skill_id, 0)
+            if skill_level < required_skill_level:
+                return False, f"Requires {skill_id} level {required_skill_level}+", 0
+        else:
+            return False, f"Requires {skill_id} level {required_skill_level}+", 0
 
         # Calculate cost
         base_cost = ship_data["cost"]
