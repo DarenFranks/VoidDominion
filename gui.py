@@ -51,6 +51,13 @@ COLORS = {
     'glow': '#00d9ff40',            # Semi-transparent cyan glow
 }
 
+# Universe map configuration
+MAP_ZOOM_MIN = 0.5            # Minimum zoom level (zoomed out)
+MAP_ZOOM_MAX = 4.0            # Maximum zoom level (zoomed in)
+MAP_ZOOM_STEP = 0.1           # Zoom increment per mouse wheel tick
+MAP_CANVAS_WIDTH = 500        # Base canvas width
+MAP_CANVAS_HEIGHT = 400       # Base canvas height
+
 
 def format_module_specs(module_data: dict) -> str:
     """Format module specifications into a readable string"""
@@ -141,6 +148,13 @@ class VoidDominionGUI:
 
         # Market category tracking
         self.current_market_category = 'all'
+
+        # Universe map view state
+        self.map_zoom_level = 1.0      # Default zoom (1.0 = normal)
+        self.map_pan_offset_x = 0.0    # Pan offset in world coordinates
+        self.map_pan_offset_y = 0.0    # Pan offset in world coordinates
+        self.map_drag_start = None     # (x, y) mouse position when drag started
+        self.map_canvas = None         # Reference to canvas for event binding
 
         # Configure styles
         self.setup_styles()
@@ -662,6 +676,7 @@ class VoidDominionGUI:
 
     def clear_content(self):
         """Clear content area"""
+        self.map_canvas = None  # Clear canvas reference
         for widget in self.content_frame.winfo_children():
             widget.destroy()
 
@@ -774,8 +789,88 @@ class VoidDominionGUI:
         frame.bind("<Enter>", bind_wheel)
         frame.bind("<Leave>", unbind_wheel)
 
-    def draw_universe_map(self, parent):
-        """Draw universe map with fog of war"""
+    def on_map_mousewheel(self, event):
+        """Handle mouse wheel for zooming the universe map"""
+        # Determine scroll direction (cross-platform)
+        if event.num == 4 or event.delta > 0:
+            zoom_delta = MAP_ZOOM_STEP  # Zoom in
+        elif event.num == 5 or event.delta < 0:
+            zoom_delta = -MAP_ZOOM_STEP  # Zoom out
+        else:
+            return
+
+        # Calculate new zoom level
+        new_zoom = self.map_zoom_level + zoom_delta
+        new_zoom = max(MAP_ZOOM_MIN, min(MAP_ZOOM_MAX, new_zoom))
+
+        if new_zoom == self.map_zoom_level:
+            return  # Already at min/max
+
+        # Get mouse position on canvas
+        canvas_x = event.x
+        canvas_y = event.y
+
+        # Convert to world coordinates (before zoom)
+        world_x = (canvas_x - MAP_CANVAS_WIDTH/2 - self.map_pan_offset_x) / self.map_zoom_level
+        world_y = (canvas_y - MAP_CANVAS_HEIGHT/2 - self.map_pan_offset_y) / self.map_zoom_level
+
+        # Update zoom level
+        old_zoom = self.map_zoom_level
+        self.map_zoom_level = new_zoom
+
+        # Adjust pan offset to keep mouse position stable (zoom to cursor)
+        # New screen position should match old screen position
+        new_screen_x = world_x * self.map_zoom_level + MAP_CANVAS_WIDTH/2 + self.map_pan_offset_x
+        new_screen_y = world_y * self.map_zoom_level + MAP_CANVAS_HEIGHT/2 + self.map_pan_offset_y
+
+        self.map_pan_offset_x += canvas_x - new_screen_x
+        self.map_pan_offset_y += canvas_y - new_screen_y
+
+        # Redraw map
+        self.redraw_universe_map()
+
+    def on_map_button_press(self, event):
+        """Handle mouse button press for starting pan drag"""
+        # Store drag start position
+        self.map_drag_start = (event.x, event.y)
+        # Change cursor to indicate dragging
+        if self.map_canvas:
+            self.map_canvas.config(cursor="fleur")  # Four-way arrow cursor
+
+    def on_map_motion(self, event):
+        """Handle mouse motion for panning the map"""
+        if self.map_drag_start is None:
+            return  # Not dragging
+
+        # Calculate delta from drag start
+        dx = event.x - self.map_drag_start[0]
+        dy = event.y - self.map_drag_start[1]
+
+        # Update pan offset
+        self.map_pan_offset_x += dx
+        self.map_pan_offset_y += dy
+
+        # Update drag start for next motion event
+        self.map_drag_start = (event.x, event.y)
+
+        # Redraw map
+        self.redraw_universe_map()
+
+    def on_map_button_release(self, event):
+        """Handle mouse button release for ending pan drag"""
+        self.map_drag_start = None
+        # Reset cursor
+        if self.map_canvas:
+            self.map_canvas.config(cursor="")
+
+    def redraw_universe_map(self):
+        """Redraw the universe map with current zoom/pan settings"""
+        if self.map_canvas is None:
+            return  # Canvas not initialized yet
+
+        # Clear canvas
+        self.map_canvas.delete("all")
+
         # Define coordinates for each location (x, y) - normalized 0-1
         location_coords = {
             "nexus_prime": (0.5, 0.5),
@@ -798,11 +893,21 @@ class VoidDominionGUI:
             "chronos_expanse": (0.05, 0.25),
         }
 
-        # Create canvas
-        canvas_width = 500
-        canvas_height = 400
-        canvas = tk.Canvas(parent, bg=COLORS['bg_dark'], width=canvas_width, height=canvas_height, highlightthickness=1, highlightbackground=COLORS['text_dim'])
-        canvas.pack(pady=10, padx=10)
+        # Helper function: Transform normalized coords to screen coords
+        def to_screen_coords(norm_x, norm_y):
+            # Convert normalized (0-1) to world coordinates (-1 to 1 centered)
+            world_x = (norm_x - 0.5) * 1000  # Scale to larger world space
+            world_y = (norm_y - 0.5) * 800
+
+            # Apply zoom
+            zoomed_x = world_x * self.map_zoom_level
+            zoomed_y = world_y * self.map_zoom_level
+
+            # Apply pan and center in canvas
+            screen_x = zoomed_x + MAP_CANVAS_WIDTH/2 + self.map_pan_offset_x
+            screen_y = zoomed_y + MAP_CANVAS_HEIGHT/2 + self.map_pan_offset_y
+
+            return screen_x, screen_y
 
         # Get player data
         visited = self.engine.player.visited_locations
@@ -813,11 +918,7 @@ class VoidDominionGUI:
             if loc_id not in location_coords:
                 continue
 
-            x1, y1 = location_coords[loc_id]
-            x1 = x1 * (canvas_width - 40) + 20
-            y1 = y1 * (canvas_height - 40) + 20
-
-            # Check if this location or any connected location is visited
+            x1, y1 = to_screen_coords(*location_coords[loc_id])
             loc_visible = loc_id in visited
 
             for connected_id in loc_data.get("connections", []):
@@ -825,25 +926,24 @@ class VoidDominionGUI:
                     continue
 
                 connected_visible = connected_id in visited
-
-                x2, y2 = location_coords[connected_id]
-                x2 = x2 * (canvas_width - 40) + 20
-                y2 = y2 * (canvas_height - 40) + 20
+                x2, y2 = to_screen_coords(*location_coords[connected_id])
 
                 # Show line if either endpoint is visited
                 if loc_visible or connected_visible:
                     line_color = COLORS['text_dim'] if (loc_visible and connected_visible) else '#2a2a2a'
-                    canvas.create_line(x1, y1, x2, y2, fill=line_color, width=1, dash=(2, 2) if not (loc_visible and connected_visible) else ())
+                    self.map_canvas.create_line(
+                        x1, y1, x2, y2,
+                        fill=line_color,
+                        width=1,
+                        dash=(2, 2) if not (loc_visible and connected_visible) else ()
+                    )
 
         # Draw locations (as circles)
         for loc_id, loc_data in LOCATIONS.items():
             if loc_id not in location_coords:
                 continue
 
-            x, y = location_coords[loc_id]
-            x = x * (canvas_width - 40) + 20
-            y = y * (canvas_height - 40) + 20
-
+            x, y = to_screen_coords(*location_coords[loc_id])
             is_visited = loc_id in visited
             is_current = loc_id == current_location
 
@@ -864,14 +964,28 @@ class VoidDominionGUI:
                     radius = 5
 
                 # Draw circle
-                canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=fill_color, outline=outline_color, width=2)
+                self.map_canvas.create_oval(
+                    x - radius, y - radius, x + radius, y + radius,
+                    fill=fill_color, outline=outline_color, width=2
+                )
 
                 # Draw name (full name)
-                canvas.create_text(x, y - radius - 10, text=loc_data["name"], fill=COLORS['text'], font=('Arial', 7, 'bold'), anchor='s')
+                self.map_canvas.create_text(
+                    x, y - radius - 10,
+                    text=loc_data["name"],
+                    fill=COLORS['text'],
+                    font=('Arial', 7, 'bold'),
+                    anchor='s'
+                )
 
                 # If current, add pulsing indicator
                 if is_current:
-                    canvas.create_text(x, y, text="◉", fill=COLORS['accent'], font=('Arial', 12))
+                    self.map_canvas.create_text(
+                        x, y,
+                        text="◉",
+                        fill=COLORS['accent'],
+                        font=('Arial', 12)
+                    )
 
             else:
                 # Check if any connected location is visited (to show fog partially)
@@ -882,41 +996,111 @@ class VoidDominionGUI:
                     fill_color = '#1a1a1a'
                     outline_color = '#3a3a3a'
                     radius = 4
-                    canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=fill_color, outline=outline_color, width=1, dash=(2, 2))
-                    canvas.create_text(x, y - radius - 8, text="?", fill='#3a3a3a', font=('Arial', 7), anchor='s')
+                    self.map_canvas.create_oval(
+                        x - radius, y - radius, x + radius, y + radius,
+                        fill=fill_color, outline=outline_color, width=1, dash=(2, 2)
+                    )
+                    self.map_canvas.create_text(
+                        x, y - radius - 8,
+                        text="?",
+                        fill='#3a3a3a',
+                        font=('Arial', 7),
+                        anchor='s'
+                    )
                 # else: completely hidden
 
-        # Add legend
+        # Add legend (FIXED position - bottom-left, not transformed)
         legend_x = 10
-        legend_y = canvas_height - 60
+        legend_y = MAP_CANVAS_HEIGHT - 60
 
-        canvas.create_text(legend_x, legend_y, text="Legend:", fill=COLORS['text'], font=('Arial', 8, 'bold'), anchor='w')
+        self.map_canvas.create_text(
+            legend_x, legend_y,
+            text="Legend:",
+            fill=COLORS['text'],
+            font=('Arial', 8, 'bold'),
+            anchor='w'
+        )
 
         # Current location
-        canvas.create_oval(legend_x + 5, legend_y + 15, legend_x + 13, legend_y + 23, fill=COLORS['success'], outline=COLORS['accent'], width=2)
-        canvas.create_text(legend_x + 20, legend_y + 19, text="Current", fill=COLORS['text'], font=('Arial', 7), anchor='w')
+        self.map_canvas.create_oval(
+            legend_x + 5, legend_y + 15, legend_x + 13, legend_y + 23,
+            fill=COLORS['success'], outline=COLORS['accent'], width=2
+        )
+        self.map_canvas.create_text(
+            legend_x + 20, legend_y + 19,
+            text="Current",
+            fill=COLORS['text'],
+            font=('Arial', 7),
+            anchor='w'
+        )
 
         # Visited
-        canvas.create_oval(legend_x + 75, legend_y + 15, legend_x + 81, legend_y + 21, fill=COLORS['accent'], outline=COLORS['text'], width=2)
-        canvas.create_text(legend_x + 87, legend_y + 19, text="Visited", fill=COLORS['text'], font=('Arial', 7), anchor='w')
+        self.map_canvas.create_oval(
+            legend_x + 75, legend_y + 15, legend_x + 81, legend_y + 21,
+            fill=COLORS['accent'], outline=COLORS['text'], width=2
+        )
+        self.map_canvas.create_text(
+            legend_x + 87, legend_y + 19,
+            text="Visited",
+            fill=COLORS['text'],
+            font=('Arial', 7),
+            anchor='w'
+        )
 
         # Unexplored
-        canvas.create_oval(legend_x + 145, legend_y + 16, legend_x + 149, legend_y + 20, fill='#1a1a1a', outline='#3a3a3a', width=1, dash=(2, 2))
-        canvas.create_text(legend_x + 157, legend_y + 19, text="Unknown", fill=COLORS['text'], font=('Arial', 7), anchor='w')
+        self.map_canvas.create_oval(
+            legend_x + 145, legend_y + 16, legend_x + 149, legend_y + 20,
+            fill='#1a1a1a', outline='#3a3a3a', width=1, dash=(2, 2)
+        )
+        self.map_canvas.create_text(
+            legend_x + 157, legend_y + 19,
+            text="Unknown",
+            fill=COLORS['text'],
+            font=('Arial', 7),
+            anchor='w'
+        )
 
-        # Add exploration stats
+        # Add exploration stats (FIXED position - top-right, not transformed)
         total_locations = len(LOCATIONS)
         visited_count = len(visited)
         exploration_pct = (visited_count / total_locations * 100) if total_locations > 0 else 0
 
-        canvas.create_text(canvas_width - 10, 15,
-                          text=f"Explored: {visited_count}/{total_locations} ({exploration_pct:.0f}%)",
-                          fill=COLORS['text_accent'], font=('Arial', 9, 'bold'), anchor='e')
+        self.map_canvas.create_text(
+            MAP_CANVAS_WIDTH - 10, 15,
+            text=f"Explored: {visited_count}/{total_locations} ({exploration_pct:.0f}%)",
+            fill=COLORS['text_accent'],
+            font=('Arial', 9, 'bold'),
+            anchor='e'
+        )
 
-        # Add info text
+    def draw_universe_map(self, parent):
+        """Draw universe map with fog of war - setup and event binding"""
+        # Create canvas (store reference for event handlers)
+        self.map_canvas = tk.Canvas(
+            parent,
+            bg=COLORS['bg_dark'],
+            width=MAP_CANVAS_WIDTH,
+            height=MAP_CANVAS_HEIGHT,
+            highlightthickness=1,
+            highlightbackground=COLORS['text_dim']
+        )
+        self.map_canvas.pack(pady=10, padx=10)
+
+        # Bind mouse events
+        self.map_canvas.bind("<Button-4>", self.on_map_mousewheel)  # Linux scroll up
+        self.map_canvas.bind("<Button-5>", self.on_map_mousewheel)  # Linux scroll down
+        self.map_canvas.bind("<MouseWheel>", self.on_map_mousewheel)  # Windows/Mac
+        self.map_canvas.bind("<ButtonPress-1>", self.on_map_button_press)  # Left click
+        self.map_canvas.bind("<B1-Motion>", self.on_map_motion)  # Drag
+        self.map_canvas.bind("<ButtonRelease-1>", self.on_map_button_release)  # Release
+
+        # Initial draw
+        self.redraw_universe_map()
+
+        # Add info text (below canvas)
         info_text = tk.Label(
             parent,
-            text="🗺️ Travel to new locations to reveal more of the universe",
+            text="🗺️ Scroll to zoom, drag to pan | Travel to new locations to reveal more of the universe",
             font=('Arial', 8, 'italic'),
             fg=COLORS['text_dim'],
             bg=COLORS['bg_medium']
@@ -927,6 +1111,11 @@ class VoidDominionGUI:
         """Show status overview"""
         self.current_view = "status"
         self.clear_content()
+
+        # Reset map zoom/pan state
+        self.map_zoom_level = 1.0
+        self.map_pan_offset_x = 0.0
+        self.map_pan_offset_y = 0.0
 
         # PRIMARY ACTION BUTTONS - Top and Center (Most Prominent)
         action_panel, action_content = self.create_panel(self.content_frame, "⚡ COMMAND CENTER - Actions")
@@ -1342,6 +1531,11 @@ class VoidDominionGUI:
         self.current_view = "travel"
         self.status_training_content = None  # Clear reference when leaving status view
         self.clear_content()
+
+        # Reset map zoom/pan state
+        self.map_zoom_level = 1.0
+        self.map_pan_offset_x = 0.0
+        self.map_pan_offset_y = 0.0
 
         # Create two-column layout for map and connections
         left_frame = tk.Frame(self.content_frame, bg=COLORS['bg_dark'])
