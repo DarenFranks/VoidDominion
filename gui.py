@@ -872,25 +872,86 @@ class VoidDominionGUI:
         self.map_canvas.delete("all")
 
         # Define coordinates for each location (x, y) - normalized 0-1
+        # Complete galaxy map with all 58 locations organized by faction territories
         location_coords = {
-            "nexus_prime": (0.5, 0.5),
-            "forge_station": (0.35, 0.35),
+            # ========== NEUTRAL ZONE - CENTER (4 core locations) ==========
+            "nexus_prime": (0.50, 0.50),  # Starting location
+            "starlight_waystation": (0.45, 0.45),
+            "freeport_exchange": (0.55, 0.55),
+            "tranquil_belt": (0.50, 0.40),
+
+            # ========== MERIDIAN COLLECTIVE - UPPER RIGHT (9 locations) ==========
             "meridian_gates": (0.65, 0.35),
-            "outer_belts": (0.5, 0.7),
-            "titan_alpha": (0.7, 0.5),
-            "shadow_nebula": (0.3, 0.7),
-            "corsair_haven": (0.15, 0.8),
-            "synthesis_planet": (0.2, 0.3),
-            "ironhold_sectors": (0.4, 0.2),
-            "neural_network": (0.15, 0.15),
-            "harvest_fields": (0.6, 0.75),
-            "axiom_labs": (0.1, 0.3),
-            "crimson_expanse": (0.5, 0.15),
-            "dead_zone_asteroids": (0.25, 0.85),
-            "blackmarket_dock": (0.35, 0.9),
-            "ironhold_world": (0.55, 0.2),
-            "pristine_fields": (0.6, 0.1),
-            "chronos_expanse": (0.05, 0.25),
+            "titan_alpha": (0.70, 0.50),
+            "aurora_reach": (0.75, 0.40),
+            "prosperity_hub": (0.80, 0.35),
+            "eden_prime": (0.85, 0.45),
+            "explorer_outpost": (0.90, 0.40),
+            "horizon_vista": (0.85, 0.30),
+            "merchant_corridor": (0.75, 0.30),
+
+            # ========== CIPHER DOMINION - LOWER RIGHT (10 locations) ==========
+            "crimson_expanse": (0.65, 0.65),
+            "ironhold_sectors": (0.70, 0.70),
+            "ironhold_world": (0.75, 0.75),
+            "bastion_prime": (0.80, 0.70),
+            "garrison_outpost": (0.85, 0.75),
+            "conquest_reach": (0.90, 0.70),
+            "vanguard_citadel": (0.85, 0.85),
+            "dreadnought_yards": (0.90, 0.80),
+            "supremacy_throne": (0.95, 0.85),
+            "contested_zone": (0.70, 0.60),
+
+            # ========== TECHNOCRAT UNION - UPPER LEFT (11 locations) ==========
+            "forge_station": (0.35, 0.35),
+            "synthesis_planet": (0.25, 0.30),
+            "neural_network": (0.20, 0.35),
+            "axiom_labs": (0.15, 0.30),
+            "datacore_prime": (0.10, 0.35),
+            "protocol_labs": (0.15, 0.25),
+            "singularity_reach": (0.10, 0.20),
+            "void_forge": (0.20, 0.20),
+            "silicon_spire": (0.25, 0.15),
+            "convergence_nexus": (0.30, 0.20),
+            "algorithm_expanse": (0.05, 0.25),
+
+            # ========== VOID CORSAIRS - LOWER LEFT (6 locations) ==========
+            "shadow_nebula": (0.30, 0.70),
+            "corsair_haven": (0.25, 0.75),
+            "blackmarket_dock": (0.30, 0.80),
+            "phantom_reach": (0.20, 0.70),
+            "oblivion_gate": (0.15, 0.75),
+            "dread_maw": (0.10, 0.80),
+
+            # ========== NEUTRAL ASTEROIDS - SCATTERED (22 locations) ==========
+            # Upper edge
+            "pristine_fields": (0.60, 0.10),
+            "circuit_fields": (0.50, 0.15),
+            "crystal_gardens": (0.40, 0.10),
+
+            # Right edge
+            "harvest_fields": (0.95, 0.60),
+            "sapphire_fields": (0.95, 0.50),
+            "verdant_belt": (0.90, 0.55),
+
+            # Bottom edge
+            "dead_zone_asteroids": (0.50, 0.90),
+            "outer_belts": (0.60, 0.85),
+            "reaver_belt": (0.40, 0.90),
+            "bloodstone_fields": (0.35, 0.85),
+
+            # Left edge
+            "chronos_expanse": (0.05, 0.45),
+            "quantum_drift": (0.05, 0.55),
+            "recursion_point": (0.05, 0.65),
+
+            # Between territories (connectors)
+            "iron_expanse": (0.60, 0.75),
+            "warforge_belt": (0.75, 0.65),
+            "sovereign_belt": (0.80, 0.80),
+            "binary_belt": (0.35, 0.25),
+            "uncharted_expanse": (0.45, 0.60),
+            "abyss_edge": (0.15, 0.85),
         }
 
         # Helper function: Transform normalized coords to screen coords
