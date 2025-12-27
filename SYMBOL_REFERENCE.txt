@@ -1,0 +1,120 @@
+═══════════════════════════════════════════════════════════════
+    VOID DOMINION - ICON SYMBOL REFERENCE
+═══════════════════════════════════════════════════════════════
+
+RESOURCES - RAW MATERIALS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ Voltium Ore       - Conductive crystalline material
+💨 Nexium Gas        - Exotic propulsion fuel
+🔷 Chronite Crystal  - Time-dilated quantum crystal
+⬛ Titanite Ore      - Heavy metallic hull material
+💎 Synthcrystal      - Programmable matter
+🌊 Darkwater         - Void anomaly fluid
+🧬 Neural Fiber      - Organic computing substrate
+✨ Quantum Dust      - Unstable particles
+
+RESOURCES - REFINED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔋 Voltium Ingot     - Refined conductive material
+🛢️ Nexium Fuel       - Processed fuel
+💠 Chronite Wafer    - Quantum computing crystal
+🔩 Titanite Alloy    - Processed hull material
+💠 Synthcrystal Matrix - Refined programmable matter
+🌀 Darkwater Essence - Stabilized void fluid
+🧵 Neural Fiber Mesh - Processed computing material
+⭐ Quantum Dust      - Refined particles
+
+SHIP CLASSES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔭 Scout            - Fast exploration vessel
+✈️ Fighter          - Agile combat ship
+📦 Hauler           - Large cargo transport
+🚢 Cruiser          - Medium multi-role ship
+⚔️ Destroyer        - Heavy combat vessel
+🏰 Battleship       - Massive warship
+🎯 Carrier          - Fighter deployment platform
+⚙️ Refinery         - Mobile processing ship
+🏛️ Mothership       - Command & control vessel
+
+MODULES - WEAPONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚔️ Generic Weapon    - All weapon types
+🔫 Pulse Cannon     - Rapid-fire energy weapon
+🔥 Plasma Lance     - Focused beam weapon
+💣 Void Torpedo     - Explosive projectile
+⚡ Railgun          - Kinetic accelerator
+⚡ Ion Beam         - Ion particle weapon
+
+MODULES - DEFENSE & UTILITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️ Shield Generator  - Defensive shields
+🔰 Armor Plating     - Hull reinforcement
+🚀 Thruster Array    - Propulsion system
+📡 Sensor Suite      - Scanning equipment
+💻 Computer System   - Ship AI/control
+⚡ Power Core        - Energy generation
+⛏️ Mining Laser      - Resource extraction
+⚙️ Refining Module   - Ore processing
+📦 Cargo Hold        - Storage expansion
+
+LOCATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏭 Space Station    - Trading hub
+🌍 Planet           - Populated world
+☄️ Asteroid Belt    - Mining region
+🌌 Nebula           - Gas cloud
+🏘️ Outpost          - Small settlement
+📍 Sector           - Space region
+🌠 Expanse          - Open space
+⚫ Void             - Dark space
+🚪 Jump Gate        - Transit point
+
+FACTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚖️ Meridian Collective - Order & justice
+⚙️ Technocrat Union    - Technology focus
+👻 Void Walkers        - Mysterious dwellers
+💰 Free Traders        - Commerce guild
+🏴‍☠️ Crimson Fleet      - Pirates
+🛡️ Stellar Guard       - Military force
+💀 Outcasts            - Outlaws
+
+UI ELEMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 Credits          🛡️ Shield Status    ⚠️ Danger
+⛽ Fuel             ❤️ Health            ☠️ Hostile
+📦 Cargo            🔒 Locked            🤝 Friendly
+⭐ Level            🔓 Unlocked          ➖ Neutral
+📊 Experience       📜 Quest             ⚔️ Combat
+🎯 Skill            📋 Contract          💱 Trade
+🏭 Manufacture      ⚗️ Refine            ⛏️ Mine
+🔧 Repair           ⬆️ Upgrade           💸 Sell
+🛒 Buy              🎒 Inventory         🗺️ Map
+📍 Location         🧭 Travel            ⚓ Docked
+
+RARITY INDICATORS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚪ Common           - Grey      #8b949e
+🔵 Uncommon         - Cyan      #00d9ff
+🟢 Rare             - Green     #00ff88
+🟣 Very Rare        - Purple    #7b2cbf
+🟠 Legendary        - Gold      #ffaa00
+
+═══════════════════════════════════════════════════════════════
+
+USAGE NOTES:
+- Icons displayed where items appear in GUI
+- Fallback to symbols if PNG not available
+- Symbols sized dynamically (12px - 48px)
+- Rarity affects icon color tinting
+- All symbols support color customization
+
+FILES:
+- symbols.py        - Symbol definitions
+- icon_manager.py   - Icon system
+- assets/icons/     - PNG icons
+
+CUSTOMIZATION:
+See ICON_GUIDE.md for creating custom artwork
+
+═══════════════════════════════════════════════════════════════

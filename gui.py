@@ -12,6 +12,8 @@ from game_engine import GameEngine
 from data import LOCATIONS, RESOURCES, MODULES, SKILLS, FACTIONS, VESSEL_CLASSES, SHIP_COMPONENTS, RAW_RESOURCES, REFINING_YIELD_RANGES
 from save_system import save_exists
 from volume_system import can_add_item
+from icon_manager import get_icon_manager
+from symbols import get_symbol
 
 # Color Scheme (Modern Sci-Fi theme)
 COLORS = {
@@ -137,6 +139,10 @@ class VoidDominionGUI:
         self.engine = GameEngine()
         self.current_view = "main"
         self.update_running = False
+
+        # Icon manager for graphics
+        self.icon_manager = get_icon_manager()
+        self.icon_manager.preload_common_icons()
 
         # Notification system
         self.notification_container = None
@@ -763,6 +769,37 @@ class VoidDominionGUI:
             content = tk.Frame(panel, bg=COLORS['bg_light'])
             content.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
             return panel, content
+
+    def create_scrollable_frame(self, parent, bg_color=None):
+        """
+        Create a scrollable frame that expands to fill available width
+        Returns: (canvas, scrollbar, scrollable_frame)
+        """
+        if bg_color is None:
+            bg_color = COLORS['bg_medium']
+
+        canvas = tk.Canvas(parent, bg=bg_color, highlightthickness=0)
+        scrollbar = tk.Scrollbar(parent, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=bg_color)
+
+        # Update scroll region when content changes
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=(0, 0, canvas.winfo_width(), scrollable_frame.winfo_reqheight()))
+        )
+
+        # Create window and make it expand to canvas width
+        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        # Bind canvas width changes to update scrollable frame width
+        def on_canvas_configure(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+        canvas.bind('<Configure>', on_canvas_configure)
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+        self.bind_mousewheel(canvas, scrollable_frame)
+
+        return canvas, scrollbar, scrollable_frame
 
     def bind_mousewheel(self, canvas, frame):
         """Bind mouse wheel scrolling to canvas"""
@@ -1670,9 +1707,29 @@ class VoidDominionGUI:
             loc_frame = tk.Frame(scrollable_frame, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
             loc_frame.pack(fill=tk.X, pady=5, padx=10)
 
+            # Location icon
+            icon_frame = tk.Frame(loc_frame, bg=COLORS['bg_light'])
+            icon_frame.pack(side=tk.LEFT, padx=(10, 5), pady=10)
+
+            loc_type = conn_data.get('type', 'station')
+            icon = self.icon_manager.get_icon('location', loc_type, size='medium')
+            if icon:
+                icon_label = tk.Label(icon_frame, image=icon, bg=COLORS['bg_light'])
+                icon_label.image = icon
+                icon_label.pack()
+            else:
+                symbol = get_symbol('location', loc_type)
+                tk.Label(
+                    icon_frame,
+                    text=symbol,
+                    font=('Arial', 16),
+                    fg=COLORS['accent'],
+                    bg=COLORS['bg_light']
+                ).pack()
+
             # Location info
             info = tk.Frame(loc_frame, bg=COLORS['bg_light'])
-            info.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+            info.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=10)
 
             tk.Label(
                 info,
@@ -1714,7 +1771,7 @@ class VoidDominionGUI:
             ).pack()
 
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
     def show_market_view(self, category='all'):
         """Show market/trading view with category filtering"""
@@ -1803,18 +1860,7 @@ class VoidDominionGUI:
             ).pack(side=tk.LEFT, padx=2)
 
         # Scrollable market list
-        canvas = tk.Canvas(market_content, bg=COLORS['bg_medium'], highlightthickness=0)
-        scrollbar = tk.Scrollbar(market_content, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg=COLORS['bg_medium'])
-
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=(0, 0, canvas.winfo_width(), scrollable_frame.winfo_reqheight()))
-        )
-
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        self.bind_mousewheel(canvas, scrollable_frame)
+        canvas, scrollbar, scrollable_frame = self.create_scrollable_frame(market_content)
 
         # Get and filter listings
         from data import RESOURCES, COMMODITIES
@@ -1885,9 +1931,32 @@ class VoidDominionGUI:
                 item_frame = tk.Frame(scrollable_frame, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
                 item_frame.pack(fill=tk.X, pady=3, padx=5)
 
+                # Icon (left side)
+                icon_frame = tk.Frame(item_frame, bg=COLORS['bg_light'])
+                icon_frame.pack(side=tk.LEFT, padx=(10, 5), pady=8)
+
+                # Get icon for this resource/commodity
+                item_id = listing['id']
+                rarity = listing.get('rarity', None)
+                icon = self.icon_manager.get_icon('resource', item_id, size='medium', rarity=rarity)
+                if icon:
+                    icon_label = tk.Label(icon_frame, image=icon, bg=COLORS['bg_light'])
+                    icon_label.image = icon  # Keep a reference
+                    icon_label.pack()
+                else:
+                    # Fallback to text symbol
+                    symbol = get_symbol('resource', item_id)
+                    tk.Label(
+                        icon_frame,
+                        text=symbol,
+                        font=('Arial', 16),
+                        fg=COLORS['accent'],
+                        bg=COLORS['bg_light']
+                    ).pack()
+
                 # Item info
                 info = tk.Frame(item_frame, bg=COLORS['bg_light'])
-                info.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=8)
+                info.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=8)
 
                 tk.Label(
                     info,
@@ -1958,7 +2027,7 @@ class VoidDominionGUI:
         search_var.trace('w', on_search_change)
 
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
         # Right - Inventory (Ship Cargo + Station Storage)
         right_col = tk.Frame(self.content_frame, bg=COLORS['bg_dark'])
@@ -2084,7 +2153,7 @@ class VoidDominionGUI:
                     ).pack(side=tk.LEFT, padx=2)
 
             ship_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            ship_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            # ship_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
             # Total value
             tk.Label(
@@ -2231,7 +2300,7 @@ class VoidDominionGUI:
                 ).pack(side=tk.LEFT, padx=2)
 
             station_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            station_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            # station_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
             # Total value
             tk.Label(
@@ -2272,7 +2341,7 @@ class VoidDominionGUI:
         available_contracts = self.engine.contract_board.get_available_contracts(self.engine.player.location)
 
         panel, content = self.create_panel(self.content_frame, "Available Contracts")
-        panel.pack(fill=tk.BOTH, expand=True)
+        panel.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Scrollable contracts list
         canvas = tk.Canvas(content, bg=COLORS['bg_medium'], highlightthickness=0)
@@ -2284,7 +2353,13 @@ class VoidDominionGUI:
             lambda e: canvas.configure(scrollregion=(0, 0, canvas.winfo_width(), scrollable_frame.winfo_reqheight()))
         )
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        # Bind canvas width changes to update scrollable frame width
+        def on_canvas_configure(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+        canvas.bind('<Configure>', on_canvas_configure)
+
         canvas.configure(yscrollcommand=scrollbar.set)
         self.bind_mousewheel(canvas, scrollable_frame)
 
@@ -2316,14 +2391,20 @@ class VoidDominionGUI:
             ).pack(side=tk.RIGHT)
 
             # Description
-            tk.Label(
+            desc_label = tk.Label(
                 contract_frame,
                 text=contract.description,
                 font=('Arial', 10),
                 fg=COLORS['text'],
                 bg=COLORS['bg_light'],
-                wraplength=700
-            ).pack(anchor='w', padx=15, pady=5)
+                justify=tk.LEFT
+            )
+            desc_label.pack(anchor='w', fill=tk.X, padx=15, pady=5)
+
+            # Update wraplength dynamically
+            def update_wraplength(event, label=desc_label):
+                label.configure(wraplength=event.width - 30)
+            contract_frame.bind('<Configure>', update_wraplength)
 
             # Objective
             tk.Label(
@@ -2363,7 +2444,7 @@ class VoidDominionGUI:
             ).pack(side=tk.RIGHT)
 
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
     def show_skills_view(self, filter_category='all'):
         """Show skills view with category filtering"""
@@ -2372,7 +2453,7 @@ class VoidDominionGUI:
         self.clear_content()
 
         panel, content = self.create_panel(self.content_frame, "Skills & Training")
-        panel.pack(fill=tk.BOTH, expand=True)
+        panel.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Current training status at the top
         training_progress = self.engine.player.get_training_progress()
@@ -2467,7 +2548,13 @@ class VoidDominionGUI:
             lambda e: canvas.configure(scrollregion=(0, 0, canvas.winfo_width(), scrollable_frame.winfo_reqheight()))
         )
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        # Bind canvas width changes to update scrollable frame width
+        def on_canvas_configure(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+        canvas.bind('<Configure>', on_canvas_configure)
+
         canvas.configure(yscrollcommand=scrollbar.set)
         self.bind_mousewheel(canvas, scrollable_frame)
 
@@ -2576,7 +2663,7 @@ class VoidDominionGUI:
                     ).pack()
 
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
     def show_vessel_view(self):
         """Show vessel info and modules"""
@@ -2709,7 +2796,7 @@ class VoidDominionGUI:
         self.bind_mousewheel(canvas, scrollable_frame)
 
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
         # Info message
         info_frame = tk.Frame(scrollable_frame, bg=COLORS['bg_medium'], relief=tk.RIDGE, bd=1)
@@ -3109,7 +3196,13 @@ class VoidDominionGUI:
                     lambda e: installed_canvas.configure(scrollregion=(0, 0, installed_canvas.winfo_width(), installed_scrollable.winfo_reqheight()))
                 )
 
-                installed_canvas.create_window((0, 0), window=installed_scrollable, anchor="nw")
+                installed_canvas_window = installed_canvas.create_window((0, 0), window=installed_scrollable, anchor="nw")
+
+                # Make scrollable frame expand to canvas width
+                def on_installed_canvas_configure(event):
+                    installed_canvas.itemconfig(installed_canvas_window, width=event.width)
+                installed_canvas.bind('<Configure>', on_installed_canvas_configure)
+
                 installed_canvas.configure(yscrollcommand=installed_scrollbar.set)
                 self.bind_mousewheel(installed_canvas, installed_scrollable)
 
@@ -3135,6 +3228,16 @@ class VoidDominionGUI:
                                 module_frame = tk.Frame(installed_scrollable, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
                                 module_frame.pack(fill=tk.X, padx=5, pady=2)
 
+                                # Remove button (right side)
+                                self.create_button(
+                                    module_frame,
+                                    "Remove",
+                                    lambda m=module_id, t=module_type: self.remove_module_action(m, t),
+                                    width=10,
+                                    style='danger'
+                                ).pack(side=tk.RIGHT, padx=5, pady=5)
+
+                                # Info frame (fills remaining space)
                                 info_frame = tk.Frame(module_frame, bg=COLORS['bg_light'])
                                 info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=5)
 
@@ -3156,15 +3259,6 @@ class VoidDominionGUI:
                                     bg=COLORS['bg_light']
                                 ).pack(anchor='w')
 
-                                # Remove button
-                                self.create_button(
-                                    module_frame,
-                                    "Remove",
-                                    lambda m=module_id, t=module_type: self.remove_module_action(m, t),
-                                    width=8,
-                                    style='danger'
-                                ).pack(side=tk.RIGHT, padx=5, pady=5)
-
                 if not has_modules:
                     tk.Label(
                         installed_scrollable,
@@ -3175,7 +3269,7 @@ class VoidDominionGUI:
                     ).pack(pady=20)
 
                 installed_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-                installed_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+                # installed_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
                 # Right column: Available modules (in inventory)
                 available_frame = tk.Frame(columns_frame, bg=COLORS['bg_medium'])
@@ -3199,7 +3293,13 @@ class VoidDominionGUI:
                     lambda e: available_canvas.configure(scrollregion=(0, 0, available_canvas.winfo_width(), available_scrollable.winfo_reqheight()))
                 )
 
-                available_canvas.create_window((0, 0), window=available_scrollable, anchor="nw")
+                available_canvas_window = available_canvas.create_window((0, 0), window=available_scrollable, anchor="nw")
+
+                # Make scrollable frame expand to canvas width
+                def on_available_canvas_configure(event):
+                    available_canvas.itemconfig(available_canvas_window, width=event.width)
+                available_canvas.bind('<Configure>', on_available_canvas_configure)
+
                 available_canvas.configure(yscrollcommand=available_scrollbar.set)
                 self.bind_mousewheel(available_canvas, available_scrollable)
 
@@ -3229,6 +3329,31 @@ class VoidDominionGUI:
                                 module_frame = tk.Frame(available_scrollable, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
                                 module_frame.pack(fill=tk.X, padx=5, pady=2)
 
+                                # Check if slots available
+                                current_count = len(vessel.installed_modules[module_type])
+                                max_slots = vessel.module_slots[module_type]
+                                can_install = current_count < max_slots
+
+                                # Install button (right side)
+                                if can_install:
+                                    self.create_button(
+                                        module_frame,
+                                        "Install",
+                                        lambda m=module_id: self.install_module_action(m),
+                                        width=10,
+                                        style='success'
+                                    ).pack(side=tk.RIGHT, padx=5, pady=5)
+                                else:
+                                    tk.Label(
+                                        module_frame,
+                                        text="No Slots",
+                                        font=('Arial', 8),
+                                        fg=COLORS['danger'],
+                                        bg=COLORS['bg_light'],
+                                        width=10
+                                    ).pack(side=tk.RIGHT, padx=5, pady=5)
+
+                                # Info frame (fills remaining space)
                                 info_frame = tk.Frame(module_frame, bg=COLORS['bg_light'])
                                 info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=5)
 
@@ -3250,28 +3375,6 @@ class VoidDominionGUI:
                                     bg=COLORS['bg_light']
                                 ).pack(anchor='w')
 
-                                # Check if slots available
-                                current_count = len(vessel.installed_modules[module_type])
-                                max_slots = vessel.module_slots[module_type]
-                                can_install = current_count < max_slots
-
-                                if can_install:
-                                    self.create_button(
-                                        module_frame,
-                                        "Install",
-                                        lambda m=module_id: self.install_module_action(m),
-                                        width=8,
-                                        style='success'
-                                    ).pack(side=tk.RIGHT, padx=5, pady=5)
-                                else:
-                                    tk.Label(
-                                        module_frame,
-                                        text="No Slots",
-                                        font=('Arial', 8),
-                                        fg=COLORS['danger'],
-                                        bg=COLORS['bg_light']
-                                    ).pack(side=tk.RIGHT, padx=5, pady=5)
-
                 else:
                     tk.Label(
                         available_scrollable,
@@ -3283,7 +3386,7 @@ class VoidDominionGUI:
                     ).pack(pady=20)
 
                 available_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-                available_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+                # available_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
                 # Bottom row: Station inventory
                 station_frame = tk.Frame(modules_content, bg=COLORS['bg_medium'])
@@ -3307,7 +3410,13 @@ class VoidDominionGUI:
                     lambda e: station_canvas.configure(scrollregion=(0, 0, station_canvas.winfo_width(), station_scrollable.winfo_reqheight()))
                 )
 
-                station_canvas.create_window((0, 0), window=station_scrollable, anchor="nw")
+                station_canvas_window = station_canvas.create_window((0, 0), window=station_scrollable, anchor="nw")
+
+                # Make scrollable frame expand to canvas width
+                def on_station_canvas_configure(event):
+                    station_canvas.itemconfig(station_canvas_window, width=event.width)
+                station_canvas.bind('<Configure>', on_station_canvas_configure)
+
                 station_canvas.configure(yscrollcommand=station_scrollbar.set)
                 self.bind_mousewheel(station_canvas, station_scrollable)
 
@@ -3340,6 +3449,16 @@ class VoidDominionGUI:
                                 module_frame = tk.Frame(station_scrollable, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
                                 module_frame.pack(fill=tk.X, padx=5, pady=2)
 
+                                # Transfer to ship button (right side)
+                                self.create_button(
+                                    module_frame,
+                                    "➜ Ship",
+                                    lambda m=module_id: self.transfer_module_to_ship(m),
+                                    width=10,
+                                    style='info'
+                                ).pack(side=tk.RIGHT, padx=5, pady=5)
+
+                                # Info frame (fills remaining space)
                                 info_frame = tk.Frame(module_frame, bg=COLORS['bg_light'])
                                 info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=5)
 
@@ -3361,15 +3480,6 @@ class VoidDominionGUI:
                                     bg=COLORS['bg_light']
                                 ).pack(anchor='w')
 
-                                # Transfer to ship button
-                                self.create_button(
-                                    module_frame,
-                                    "➜ Ship",
-                                    lambda m=module_id: self.transfer_module_to_ship(m),
-                                    width=8,
-                                    style='info'
-                                ).pack(side=tk.RIGHT, padx=5, pady=5)
-
                 else:
                     tk.Label(
                         station_scrollable,
@@ -3381,7 +3491,7 @@ class VoidDominionGUI:
                     ).pack(pady=20)
 
                 station_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
-                station_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+                # station_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
             create_toggle_section(scrollable_frame, "⚙️ Module Management", build_modules_content)
 
@@ -3453,8 +3563,27 @@ class VoidDominionGUI:
                             ship_frame = tk.Frame(scrollable_frame_inner, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=2)
                             ship_frame.pack(fill=tk.X, pady=3, padx=10)
 
+                            # Ship icon
+                            icon_frame = tk.Frame(ship_frame, bg=COLORS['bg_light'])
+                            icon_frame.pack(side=tk.LEFT, padx=(10, 5), pady=10)
+
+                            icon = self.icon_manager.get_icon('ship', ship['class_type'], size='large')
+                            if icon:
+                                icon_label = tk.Label(icon_frame, image=icon, bg=COLORS['bg_light'])
+                                icon_label.image = icon
+                                icon_label.pack()
+                            else:
+                                symbol = get_symbol('ship', ship['class_type'])
+                                tk.Label(
+                                    icon_frame,
+                                    text=symbol,
+                                    font=('Arial', 20),
+                                    fg=COLORS['accent'],
+                                    bg=COLORS['bg_light']
+                                ).pack()
+
                             info_frame = tk.Frame(ship_frame, bg=COLORS['bg_light'])
-                            info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=15, pady=10)
+                            info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
                             # Determine ship status color
                             if not ship.get("in_stock", True):
@@ -3558,7 +3687,7 @@ class VoidDominionGUI:
                                 ).pack()
 
                         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-                        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+                        # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
                 # Create buttons for each class with ship count
                 class_names = {
@@ -3805,7 +3934,7 @@ class VoidDominionGUI:
                         ).pack(pady=2)
 
             canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
         create_toggle_section(scrollable_frame, "📐 Ship Construction Blueprints", build_blueprints_content)
 
@@ -4171,7 +4300,7 @@ class VoidDominionGUI:
             canvas.configure(yscrollcommand=scrollbar.set)
 
             canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
-            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
             selected_module = [None]  # Use list to allow modification in nested function
 
@@ -4365,8 +4494,27 @@ class VoidDominionGUI:
             mod_frame = tk.Frame(scrollable_frame1, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
             mod_frame.pack(fill=tk.X, pady=3, padx=5)
 
+            # Module icon
+            icon_frame = tk.Frame(mod_frame, bg=COLORS['bg_light'])
+            icon_frame.pack(side=tk.LEFT, padx=(10, 5), pady=8)
+
+            icon = self.icon_manager.get_icon('module', module['id'], size='small')
+            if icon:
+                icon_label = tk.Label(icon_frame, image=icon, bg=COLORS['bg_light'])
+                icon_label.image = icon
+                icon_label.pack()
+            else:
+                symbol = get_symbol('module', module['id'])
+                tk.Label(
+                    icon_frame,
+                    text=symbol,
+                    font=('Arial', 14),
+                    fg=COLORS['accent'],
+                    bg=COLORS['bg_light']
+                ).pack()
+
             info = tk.Frame(mod_frame, bg=COLORS['bg_light'])
-            info.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=8)
+            info.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=8)
 
             tk.Label(
                 info,
@@ -4574,7 +4722,7 @@ class VoidDominionGUI:
             canvas.configure(yscrollcommand=scrollbar.set)
 
             canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
-            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
             selected_module = [None]  # Use list to allow modification in nested function
 
@@ -4956,7 +5104,7 @@ class VoidDominionGUI:
                 ).pack(side=tk.RIGHT, padx=15, pady=10)
 
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
 
     def start_manufacturing(self, module_id):
         """Start manufacturing a module"""
@@ -5016,13 +5164,29 @@ class VoidDominionGUI:
                     item_frame = tk.Frame(ship_content, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
                     item_frame.pack(fill=tk.X, pady=2, padx=5)
 
+                    # Icon
+                    icon = self.icon_manager.get_icon('resource', item_id, size='small', rarity=resource.get('rarity'))
+                    if icon:
+                        icon_label = tk.Label(item_frame, image=icon, bg=COLORS['bg_light'])
+                        icon_label.image = icon
+                        icon_label.pack(side=tk.LEFT, padx=(10, 5), pady=5)
+                    else:
+                        symbol = get_symbol('resource', item_id)
+                        tk.Label(
+                            item_frame,
+                            text=symbol,
+                            font=('Arial', 12),
+                            fg=COLORS['accent'],
+                            bg=COLORS['bg_light']
+                        ).pack(side=tk.LEFT, padx=(10, 5), pady=5)
+
                     tk.Label(
                         item_frame,
                         text=f"{resource['name']}: {quantity}",
                         font=('Arial', 10),
                         fg=COLORS['text'],
                         bg=COLORS['bg_light']
-                    ).pack(side=tk.LEFT, padx=10, pady=5)
+                    ).pack(side=tk.LEFT, padx=5, pady=5)
 
                     self.create_button(
                         item_frame,
@@ -5054,13 +5218,29 @@ class VoidDominionGUI:
                     item_frame = tk.Frame(station_content, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
                     item_frame.pack(fill=tk.X, pady=2, padx=5)
 
+                    # Icon
+                    icon = self.icon_manager.get_icon('resource', item_id, size='small', rarity=resource.get('rarity'))
+                    if icon:
+                        icon_label = tk.Label(item_frame, image=icon, bg=COLORS['bg_light'])
+                        icon_label.image = icon
+                        icon_label.pack(side=tk.LEFT, padx=(10, 5), pady=5)
+                    else:
+                        symbol = get_symbol('resource', item_id)
+                        tk.Label(
+                            item_frame,
+                            text=symbol,
+                            font=('Arial', 12),
+                            fg=COLORS['accent'],
+                            bg=COLORS['bg_light']
+                        ).pack(side=tk.LEFT, padx=(10, 5), pady=5)
+
                     tk.Label(
                         item_frame,
                         text=f"{resource['name']}: {quantity}",
                         font=('Arial', 10),
                         fg=COLORS['text'],
                         bg=COLORS['bg_light']
-                    ).pack(side=tk.LEFT, padx=10, pady=5)
+                    ).pack(side=tk.LEFT, padx=5, pady=5)
 
                     self.create_button(
                         item_frame,
@@ -5356,7 +5536,7 @@ class VoidDominionGUI:
                 ).pack(side=tk.RIGHT, padx=10)
 
             canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            # scrollbar.pack(side=tk.RIGHT, fill=tk.Y)  # Hidden - mouse wheel still works
         else:
             tk.Label(
                 content,
@@ -6571,7 +6751,7 @@ class VoidDominionGUI:
         inv_frame = tk.Frame(inv_canvas, bg=COLORS['bg_medium'])
 
         inv_canvas.configure(yscrollcommand=inv_scrollbar.set)
-        inv_scrollbar.pack(side='right', fill='y')
+        # inv_scrollbar.pack(side='right', fill='y')  # Hidden - mouse wheel still works
         inv_canvas.pack(side='left', fill='both', expand=True)
         inv_canvas.create_window((0, 0), window=inv_frame, anchor='nw')
 
@@ -6694,7 +6874,7 @@ class VoidDominionGUI:
         buy_list_frame = tk.Frame(buy_canvas, bg=COLORS['bg_medium'])
 
         buy_canvas.configure(yscrollcommand=buy_scrollbar.set)
-        buy_scrollbar.pack(side='right', fill='y')
+        # buy_scrollbar.pack(side='right', fill='y')  # Hidden - mouse wheel still works
         buy_canvas.pack(side='left', fill='both', expand=True)
         buy_canvas.create_window((0, 0), window=buy_list_frame, anchor='nw')
 
@@ -6749,7 +6929,7 @@ class VoidDominionGUI:
         sell_list_frame = tk.Frame(sell_canvas, bg=COLORS['bg_medium'])
 
         sell_canvas.configure(yscrollcommand=sell_scrollbar.set)
-        sell_scrollbar.pack(side='right', fill='y')
+        # sell_scrollbar.pack(side='right', fill='y')  # Hidden - mouse wheel still works
         sell_canvas.pack(side='left', fill='both', expand=True)
         sell_canvas.create_window((0, 0), window=sell_list_frame, anchor='nw')
 
