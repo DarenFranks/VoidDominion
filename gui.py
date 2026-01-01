@@ -68,8 +68,8 @@ COLORS = {
 MAP_ZOOM_MIN = 0.5            # Minimum zoom level (zoomed out)
 MAP_ZOOM_MAX = 4.0            # Maximum zoom level (zoomed in)
 MAP_ZOOM_STEP = 0.1           # Zoom increment per mouse wheel tick
-MAP_CANVAS_WIDTH = 500        # Base canvas width
-MAP_CANVAS_HEIGHT = 400       # Base canvas height
+MAP_CANVAS_WIDTH = 750        # Base canvas width (50% larger)
+MAP_CANVAS_HEIGHT = 600       # Base canvas height (50% larger)
 
 
 def format_module_specs(module_data: dict) -> str:
