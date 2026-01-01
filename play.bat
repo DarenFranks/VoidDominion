@@ -3,7 +3,7 @@ REM Void Dominion Launcher for Windows
 REM Double-click this file to run the game
 
 echo ================================================
-echo        SPACE FRONTIER - USB Edition
+echo         VOID DOMINION - USB Edition
 echo ================================================
 echo.
 echo Starting game...
