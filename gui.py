@@ -1548,11 +1548,11 @@ class VoidDominionGUI:
         info_panel.pack(fill=tk.X, pady=(0, 20), padx=20)
 
         # Get mining capabilities
-        mining_yield = self.engine.vessel.get_mining_yield()
-        mining_speed = self.engine.vessel.get_mining_speed()
+        mining_efficiency = self.engine.vessel.get_mining_efficiency()
+        mining_tier = self.engine.vessel.get_mining_tier()
 
-        info_text = f"Mining Yield Bonus: {mining_yield*100:.0f}%\n"
-        info_text += f"Mining Speed Bonus: {mining_speed*100:.0f}%\n"
+        info_text = f"Mining Tier: {mining_tier}\n"
+        info_text += f"Mining Efficiency: {mining_efficiency:.2f}x\n"
         info_text += f"Current Location: {LOCATIONS[self.engine.player.location]['name']}"
 
         tk.Label(
@@ -1614,10 +1614,8 @@ class VoidDominionGUI:
 
         # Get scanning capabilities
         scan_range = self.engine.vessel.get_scan_range()
-        detection = self.engine.vessel.get_detection_boost()
 
         info_text = f"Scan Range: {scan_range:.0f} km\n"
-        info_text += f"Detection Bonus: +{detection*100:.0f}%\n"
         info_text += f"Current Location: {LOCATIONS[self.engine.player.location]['name']}"
 
         tk.Label(
