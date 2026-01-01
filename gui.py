@@ -1580,6 +1580,66 @@ class VoidDominionGUI:
                 bg=COLORS['bg_medium']
             ).pack(pady=20)
 
+        # Show recently completed skills (last 3)
+        recent = self.engine.player.recently_completed_skills
+        if recent:
+            # Separator
+            separator = tk.Frame(self.status_training_content, bg=COLORS['border'], height=2)
+            separator.pack(fill=tk.X, pady=10, padx=5)
+
+            # Header
+            tk.Label(
+                self.status_training_content,
+                text="Recently Completed",
+                font=('Arial', 10, 'bold'),
+                fg=COLORS['success'],
+                bg=COLORS['bg_medium']
+            ).pack(anchor='w', padx=5, pady=(5, 10))
+
+            # Show each completed skill
+            for completed in recent:
+                skill_frame = tk.Frame(self.status_training_content, bg=COLORS['bg_light'], relief=tk.RIDGE, bd=1)
+                skill_frame.pack(fill=tk.X, pady=2, padx=5)
+
+                # Skill name and level
+                header_frame = tk.Frame(skill_frame, bg=COLORS['bg_light'])
+                header_frame.pack(fill=tk.X, padx=8, pady=5)
+
+                # Checkmark
+                tk.Label(
+                    header_frame,
+                    text="✓",
+                    font=('Arial', 12, 'bold'),
+                    fg=COLORS['success'],
+                    bg=COLORS['bg_light'],
+                    width=2
+                ).pack(side=tk.LEFT, padx=(0, 5))
+
+                tk.Label(
+                    header_frame,
+                    text=f"{completed['skill_name']} → Lvl {completed['level']}",
+                    font=('Arial', 9),
+                    fg=COLORS['text'],
+                    bg=COLORS['bg_light']
+                ).pack(side=tk.LEFT)
+
+                # Time since completion
+                elapsed = time.time() - completed['completion_time']
+                if elapsed < 60:
+                    time_ago = "just now"
+                elif elapsed < 3600:
+                    time_ago = f"{int(elapsed / 60)}m ago"
+                else:
+                    time_ago = f"{int(elapsed / 3600)}h ago"
+
+                tk.Label(
+                    header_frame,
+                    text=time_ago,
+                    font=('Arial', 8, 'italic'),
+                    fg=COLORS['text_dim'],
+                    bg=COLORS['bg_light']
+                ).pack(side=tk.RIGHT, padx=5)
+
     def show_mining_view(self):
         """Show mining operations view"""
         self.current_view = "mining"

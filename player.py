@@ -28,6 +28,7 @@ class Player:
         # Start with Scout Piloting level 1 since player begins with a scout ship
         self.skills["scout_piloting"] = 1
         self.skill_training: List[Dict] = []  # List of currently training skills
+        self.recently_completed_skills: List[Dict] = []  # Last 3 completed skills (for status display)
 
         # Inventory systems
         self.ship_cargo: Dict[str, int] = {}  # Items in ship cargo hold
@@ -334,6 +335,16 @@ class Player:
                 xp_reward = 50 * target_level
                 self.add_experience(xp_reward)
 
+                # Add to recently completed skills (keep last 3)
+                self.recently_completed_skills.insert(0, {
+                    "skill_id": skill_id,
+                    "skill_name": skill_name,
+                    "level": target_level,
+                    "completion_time": time.time()
+                })
+                # Keep only last 3
+                self.recently_completed_skills = self.recently_completed_skills[:3]
+
                 completed_messages.append(f"{skill_name} trained to level {target_level}! (+{xp_reward} XP)")
             else:
                 remaining_training.append(training)
@@ -443,6 +454,7 @@ class Player:
             "experience_to_next": self.experience_to_next,
             "skills": self.skills,
             "skill_training": self.skill_training,
+            "recently_completed_skills": self.recently_completed_skills,
             "ship_cargo": self.ship_cargo,
             "station_inventories": self.station_inventories,
             "inventory": self.ship_cargo,  # Backwards compatibility
@@ -478,6 +490,9 @@ class Player:
             player.skill_training = [skill_training_data]
         else:
             player.skill_training = []
+
+        # Load recently completed skills (may not exist in old saves)
+        player.recently_completed_skills = data.get("recently_completed_skills", [])
 
         # Handle backwards compatibility - old saves have "inventory", new saves have "ship_cargo"
         if "ship_cargo" in data:
