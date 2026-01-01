@@ -6986,8 +6986,8 @@ class VoidDominionGUI:
         sell_canvas.pack(side='left', fill='both', expand=True)
         sell_canvas.create_window((0, 0), window=sell_list_frame, anchor='nw')
 
-        # Populate sell list with player's inventory
-        for item_id, quantity in sorted(self.engine.player.inventory.items()):
+        # Populate sell list with player's ship cargo
+        for item_id, quantity in sorted(self.engine.player.ship_cargo.items()):
             if quantity <= 0:
                 continue
 
@@ -7109,7 +7109,7 @@ class VoidDominionGUI:
         qty_dialog.configure(bg=COLORS['bg_medium'])
 
         item_name = self.engine._get_item_name(item_id)
-        max_qty = self.engine.player.inventory.get(item_id, 0)
+        max_qty = self.engine.player.ship_cargo.get(item_id, 0)
 
         tk.Label(
             qty_dialog,

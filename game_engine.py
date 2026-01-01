@@ -500,6 +500,8 @@ class GameEngine:
         if not self.current_trader:
             return False, "No trader present"
 
+        from volume_system import can_add_item
+
         trader = self.current_trader
         item_name = self._get_item_name(item_id)
 
@@ -515,12 +517,16 @@ class GameEngine:
             if self.player.credits < total_cost:
                 return False, f"Insufficient credits. Need {total_cost:,} CR"
 
+            # Check cargo capacity before purchase
+            can_add, capacity_msg = can_add_item(self.player.ship_cargo, self.vessel.cargo_capacity, item_id, quantity)
+            if not can_add:
+                return False, f"Cannot buy: {capacity_msg}"
+
             # Execute trade
             self.player.spend_credits(total_cost)
-            success, msg = self.player.add_item(item_id, quantity, self.vessel.cargo_capacity)
-            if not success:
-                self.player.add_credits(total_cost)  # Refund
-                return False, msg
+
+            # Add to ship cargo
+            self.player.ship_cargo[item_id] = self.player.ship_cargo.get(item_id, 0) + quantity
 
             trader["inventory"][item_id] -= quantity
             if trader["inventory"][item_id] == 0:
@@ -540,8 +546,11 @@ class GameEngine:
             if trader["credits"] < total_payment:
                 return False, "Trader doesn't have enough credits"
 
-            # Execute trade
-            self.player.remove_item(item_id, quantity)
+            # Execute trade - remove from ship cargo
+            self.player.ship_cargo[item_id] -= quantity
+            if self.player.ship_cargo[item_id] == 0:
+                del self.player.ship_cargo[item_id]
+
             self.player.add_credits(total_payment)
             trader["inventory"][item_id] = trader["inventory"].get(item_id, 0) + quantity
             trader["credits"] -= total_payment
