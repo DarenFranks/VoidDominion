@@ -1008,12 +1008,12 @@ class VoidDominionGUI:
                     fill=fill_color, outline=outline_color, width=2
                 )
 
-                # Draw name (full name)
+                # Draw name (full name) with background for visibility
                 self.map_canvas.create_text(
-                    x, y - radius - 10,
+                    x, y - radius - 12,
                     text=loc_data["name"],
                     fill=COLORS['text'],
-                    font=('Arial', 7, 'bold'),
+                    font=('Arial', 9, 'bold'),
                     anchor='s'
                 )
 
@@ -1040,10 +1040,10 @@ class VoidDominionGUI:
                         fill=fill_color, outline=outline_color, width=1, dash=(2, 2)
                     )
                     self.map_canvas.create_text(
-                        x, y - radius - 8,
+                        x, y - radius - 10,
                         text="?",
-                        fill='#3a3a3a',
-                        font=('Arial', 7),
+                        fill='#5a5a5a',
+                        font=('Arial', 9, 'bold'),
                         anchor='s'
                     )
                 # else: completely hidden
@@ -1056,7 +1056,7 @@ class VoidDominionGUI:
             legend_x, legend_y,
             text="Legend:",
             fill=COLORS['text'],
-            font=('Arial', 8, 'bold'),
+            font=('Arial', 10, 'bold'),
             anchor='w'
         )
 
@@ -1069,7 +1069,7 @@ class VoidDominionGUI:
             legend_x + 20, legend_y + 19,
             text="Current",
             fill=COLORS['text'],
-            font=('Arial', 7),
+            font=('Arial', 9),
             anchor='w'
         )
 
@@ -1082,7 +1082,7 @@ class VoidDominionGUI:
             legend_x + 87, legend_y + 19,
             text="Visited",
             fill=COLORS['text'],
-            font=('Arial', 7),
+            font=('Arial', 9),
             anchor='w'
         )
 
@@ -1095,7 +1095,7 @@ class VoidDominionGUI:
             legend_x + 157, legend_y + 19,
             text="Unknown",
             fill=COLORS['text'],
-            font=('Arial', 7),
+            font=('Arial', 9),
             anchor='w'
         )
 
