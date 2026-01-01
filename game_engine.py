@@ -673,7 +673,8 @@ class GameEngine:
 
         # Calculate random yield percentage for the ENTIRE batch
         yield_percent = random.uniform(min_yield, max_yield)
-        total_refined = max(1, int(quantity * yield_percent))
+        # Use round() instead of int() for fairer yields on small batches
+        total_refined = max(1, round(quantity * yield_percent))
 
         # Determine how much raw ore comes from ship vs station
         ship_raw_qty = min(quantity, accessible_quantities["ship"])
@@ -681,8 +682,8 @@ class GameEngine:
 
         # Split refined ore proportionally based on source
         if ship_raw_qty > 0 and station_raw_qty > 0:
-            # Split proportionally
-            ship_refined = max(1, int(total_refined * (ship_raw_qty / quantity)))
+            # Split proportionally using rounding for fairness
+            ship_refined = max(1, round(total_refined * (ship_raw_qty / quantity)))
             station_refined = total_refined - ship_refined
         elif ship_raw_qty > 0:
             # All from ship
