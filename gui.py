@@ -522,26 +522,42 @@ class VoidDominionGUI:
         services = location_data.get("services", [])
 
         # Define all possible navigation buttons with their service requirements
+        # Organized by logical grouping for better flow
         all_nav_buttons = [
+            # Player Status
             ("◈ STATUS", "status", self.show_status_view, None),  # Always available
+            ("", None, None, None),  # Spacer
+
+            # Navigation & Exploration
             ("◈ TRAVEL", "travel", self.show_travel_view, None),  # Always available
             ("◈ MINING", "mining", self.show_mining_view, None),  # Always available
             ("◈ SCANNING", "scanning", self.show_scanning_view, None),  # Always available
-            ("◈ MARKET", "market", self.show_market_view, ["market", "black_market"]),
-            ("◈ CONTRACTS", "contracts", self.show_contracts_view, ["contracts"]),
             ("", None, None, None),  # Spacer
+
+            # Ship Management
             ("◈ VESSEL", "vessel", self.show_vessel_view, None),  # Always available
             ("◈ SHIPYARD", "shipyard", self.show_shipyard_view, ["shipyard"]),
             ("◈ MODULES", "modules", self.show_modules_view, ["market", "black_market"]),
-            ("◈ COMPONENTS", "components", self.show_components_view, ["market", "black_market"]),
             ("", None, None, None),  # Spacer
+
+            # Markets & Trading
+            ("◈ MARKET", "market", self.show_market_view, ["market", "black_market"]),
+            ("◈ COMPONENTS", "components", self.show_components_view, ["market", "black_market"]),
+            ("◈ CONTRACTS", "contracts", self.show_contracts_view, ["contracts"]),
+            ("", None, None, None),  # Spacer
+
+            # Production & Storage
             ("◈ MANUFACTURE", "manufacture", self.show_manufacturing_view, ["manufacturing"]),
-            ("◈ RECYCLE", "recycle", self.show_recycle_view, ["manufacturing"]),
             ("◈ REFINE", "refine", self.show_refine_view, ["refinery"]),
+            ("◈ RECYCLE", "recycle", self.show_recycle_view, ["manufacturing"]),
             ("◈ STORAGE", "storage", self.show_storage_view, None),  # Always available
             ("", None, None, None),  # Spacer
+
+            # Character Development
             ("◈ SKILLS", "skills", self.show_skills_view, None),  # Always available
             ("", None, None, None),  # Spacer
+
+            # System
             ("◆ SAVE GAME", "save", self.save_game, None),  # Always available
         ]
 
