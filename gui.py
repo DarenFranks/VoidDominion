@@ -1172,32 +1172,6 @@ class VoidDominionGUI:
         self.map_pan_offset_x = 0.0
         self.map_pan_offset_y = 0.0
 
-        # PRIMARY ACTION BUTTON - Deliver Cargo
-        action_panel, action_content = self.create_panel(self.content_frame, "⚡ COMMAND CENTER - Actions")
-        action_panel.pack(fill=tk.X, pady=(0, 20), padx=20)
-
-        # Deliver cargo button
-        button_container = tk.Frame(action_content, bg=COLORS['bg_medium'])
-        button_container.pack(pady=20, padx=20)
-
-        deliver_btn = self.create_button(
-            button_container,
-            "📦 DELIVER CARGO",
-            self.deliver_cargo,
-            width=25,
-            style='success'
-        )
-        deliver_btn.pack(padx=10, pady=10)
-
-        # Instructions
-        tk.Label(
-            action_content,
-            text="Deliver cargo for active transport contracts",
-            font=('Arial', 11, 'italic'),
-            fg=COLORS['text_accent'],
-            bg=COLORS['bg_medium']
-        ).pack(pady=(0, 15))
-
         # Left column - Player & Vessel status
         left_col = tk.Frame(self.content_frame, bg=COLORS['bg_dark'])
         left_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
@@ -2411,6 +2385,30 @@ class VoidDominionGUI:
         self.clear_content()
 
         location_data = LOCATIONS[self.engine.player.location]
+
+        # DELIVER CARGO BUTTON - Always shown at top
+        action_panel, action_content = self.create_panel(self.content_frame, "⚡ CONTRACT ACTIONS")
+        action_panel.pack(fill=tk.X, pady=(0, 10), padx=10)
+
+        button_container = tk.Frame(action_content, bg=COLORS['bg_medium'])
+        button_container.pack(pady=15, padx=20)
+
+        deliver_btn = self.create_button(
+            button_container,
+            "📦 DELIVER CARGO",
+            self.deliver_cargo,
+            width=25,
+            style='success'
+        )
+        deliver_btn.pack(padx=10, pady=5)
+
+        tk.Label(
+            action_content,
+            text="Complete active transport contracts by delivering cargo",
+            font=('Arial', 10, 'italic'),
+            fg=COLORS['text_accent'],
+            bg=COLORS['bg_medium']
+        ).pack(pady=(0, 10))
 
         if "contracts" not in location_data.get("services", []):
             tk.Label(
